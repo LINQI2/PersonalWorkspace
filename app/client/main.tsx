@@ -38,6 +38,7 @@ import {
   Sun,
   Moon,
   BookOpen,
+  ListChecks,
   Check,
   List,
   LayoutGrid,
@@ -64,6 +65,10 @@ import './unified.css';
 import './experience.css';
 import './reading-v18.css';
 import { PasteImport } from './PasteImport';
+import TasksModule from './tasks/App';
+import './tasks/tasks-scoped.css';
+import './tasks/tasks-extra.css';
+import './workspace.css';
 function App() {
   const [pasteOpen, setPasteOpen] = useState(false);
   const [previewEntry, setPreviewEntry] = useState<Entry | null>(null),
@@ -106,6 +111,20 @@ function App() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [view, setView] = useState('all');
+  // 任务台独立于知识视图开关：切到任务台时保留知识列表筛选、选中与滚动位置
+  const [tasksOpen, setTasksOpen] = useState(false);
+  const tasksOpenRef = useRef(false);
+  const knowledgeScroll = useRef(0);
+  tasksOpenRef.current = tasksOpen;
+  const leaveTasksView = () => {
+    if (tasksOpenRef.current) setTasksOpen(false);
+  };
+  useEffect(() => {
+    if (tasksOpen || !knowledgeScroll.current) return;
+    const y = knowledgeScroll.current;
+    const id = requestAnimationFrame(() => window.scrollTo(0, y));
+    return () => cancelAnimationFrame(id);
+  }, [tasksOpen]);
   const [knowledgeOpen, setKnowledgeOpen] = useState('');
   const [knowledgeDirectory, setKnowledgeDirectory] = useState('');
   const [assistantTab, setAssistantTab] = useState('ask');
@@ -328,6 +347,16 @@ function App() {
     const quickText = document.querySelector<HTMLTextAreaElement>('.quick-record textarea');
     if (quickText?.value.trim() && !confirm('快速记录尚未保存，确认离开此页面？')) return false;
     if (topicLeave.current && !(await topicLeave.current())) return false;
+    if (nextView === 'tasks') {
+      knowledgeScroll.current = window.scrollY;
+      window.dispatchEvent(new Event('pk-close-readers'));
+      setDetail(null);
+      setTasksOpen(true);
+      if (innerWidth < 760) setSidebarClosed(true);
+      history.replaceState(null, '', location.pathname + location.search + '#tasks');
+      return true;
+    }
+    leaveTasksView();
     if (nextView === 'tools' && !d && !c) clearFilters();
     clearReadingOrigin();
     window.dispatchEvent(new Event('pk-close-readers'));
@@ -336,6 +365,7 @@ function App() {
     setTopicId(c);
     setKnowledgeOpen('');
     setKnowledgeDirectory('');
+    if (innerWidth < 760) setSidebarClosed(true);
     setView(nextView);
     setDomain(d);
     setCollection(c);
@@ -395,6 +425,14 @@ function App() {
         restoringHistory = false;
         return;
       }
+      if (location.hash === '#tasks') {
+        window.dispatchEvent(new Event('pk-close-readers'));
+        setDetail(null);
+        setPreviewEntry(null);
+        setTasksOpen(true);
+        return;
+      }
+      leaveTasksView();
       const check = { dirty: false, busy: false, close: [] as (() => void)[] };
       window.dispatchEvent(new CustomEvent('pk-history-check', { detail: check }));
       if (
@@ -437,6 +475,7 @@ function App() {
         setDetail(null);
         setPreviewEntry(null);
         window.dispatchEvent(new Event('pk-history-close'));
+        setView((current) => (current === 'tasks' ? 'all' : current));
       }
     };
     const click = (e: MouseEvent) => {
@@ -564,12 +603,14 @@ function App() {
   }, []);
   const primaryNav = [
     ['all', '首页'],
+    ['tasks', '任务台'],
     ['capture', '收集箱'],
     ['library', '知识库'],
     ['assistant', 'AI 助手'],
   ];
-  const heading =
-    view === 'assistant'
+  const heading = tasksOpen
+    ? '任务台'
+    : view === 'assistant'
       ? 'AI 助手'
       : domain
         ? meta?.domains.find((x) => x.id === domain)?.name
@@ -588,31 +629,45 @@ function App() {
                     : '首页';
   return (
     <>
-      <div className={'shell experience-shell ' + (sidebarClosed ? 'sidebar-closed' : '')}>
+      <div
+        className={
+          'shell experience-shell ' +
+          (sidebarClosed ? 'sidebar-closed' : '') +
+          (tasksOpen ? ' tasks-view' : '')
+        }
+      >
         <aside className="sidebar">
           <div className="brand">
             <span className="brand-icon">
               <Library size={23} />
             </span>
             <div>
-              知识收藏馆<small>YOUR PERSONAL LIBRARY</small>
+              个人工作空间<small>YOUR PERSONAL WORKSPACE</small>
             </div>
           </div>
           <div className="workspace-label">
-            我的知识空间 <span>本地</span>
+            我的工作空间 <span>本地</span>
           </div>
           <nav aria-label="侧栏一级导航">
             <button
               title="首页"
-              className={view === 'all' && !topicId ? 'active' : ''}
+              className={!tasksOpen && view === 'all' && !topicId ? 'active' : ''}
               onClick={() => nav('all')}
             >
               <Layers size={18} />
               首页
             </button>
             <button
+              title="任务台"
+              className={tasksOpen ? 'active' : ''}
+              onClick={() => nav('tasks')}
+            >
+              <ListChecks size={18} />
+              任务台
+            </button>
+            <button
               title="收集箱"
-              className={view === 'capture' ? 'active' : ''}
+              className={!tasksOpen && view === 'capture' ? 'active' : ''}
               onClick={() => nav('capture')}
             >
               <Inbox size={18} />
@@ -620,7 +675,9 @@ function App() {
             </button>
             <button
               title="知识库"
-              className={['library', 'knowledge'].includes(view) || topicId ? 'active' : ''}
+              className={
+                !tasksOpen && (['library', 'knowledge'].includes(view) || !!topicId) ? 'active' : ''
+              }
               onClick={() => nav('library')}
             >
               <Library size={18} />
@@ -628,7 +685,7 @@ function App() {
             </button>
             <button
               title="AI 助手"
-              className={view === 'assistant' ? 'active' : ''}
+              className={!tasksOpen && view === 'assistant' ? 'active' : ''}
               onClick={async () => {
                 if (await nav('assistant')) setAssistantTab('ask');
               }}
@@ -637,7 +694,7 @@ function App() {
               AI 助手
             </button>
           </nav>
-          <div className="shell-structure">
+          <div className="shell-structure" style={tasksOpen ? { display: 'none' } : undefined}>
             {(['domains', 'collections'] as const).map((group) => (
               <section key={group}>
                 <div className="structure-heading">
@@ -731,16 +788,21 @@ function App() {
             >
               ☰
             </button>
-            <strong className="top-brand">知识收藏馆</strong>
+            <strong className="top-brand">个人工作空间</strong>
             <nav aria-label="顶部一级导航">
               {primaryNav.map(([k, v]) => (
                 <button
                   key={k}
                   className={
-                    (view === k && (k !== 'all' || !topicId)) ||
-                    (k === 'library' && (view === 'knowledge' || !!topicId))
-                      ? 'active'
-                      : ''
+                    k === 'tasks'
+                      ? tasksOpen
+                        ? 'active'
+                        : ''
+                      : !tasksOpen &&
+                          ((view === k && (k !== 'all' || !topicId)) ||
+                            (k === 'library' && (view === 'knowledge' || !!topicId)))
+                        ? 'active'
+                        : ''
                   }
                   onClick={() => nav(k)}
                 >
@@ -750,6 +812,7 @@ function App() {
             </nav>
             <form
               className="global-search"
+              style={tasksOpen ? { display: 'none' } : undefined}
               onSubmit={async (e) => {
                 e.preventDefault();
                 if (await nav('library'))
@@ -767,7 +830,11 @@ function App() {
             </form>
             <div className="top-actions">
               <AiStatusBadge onOpen={() => setSettings({ section: 'ai' })} />
-              <button className="primary" onClick={newEntry}>
+              <button
+                className="primary"
+                onClick={newEntry}
+                style={tasksOpen ? { display: 'none' } : undefined}
+              >
                 ＋ 新建
               </button>
               <button className="icon" aria-label="设置" onClick={() => setSettings({})}>
@@ -778,7 +845,10 @@ function App() {
               </button>
             </div>
           </header>
-          <div className="content">
+          <div
+            className={'content' + (tasksOpen ? ' is-tasks' : '')}
+            style={tasksOpen ? { display: 'none' } : undefined}
+          >
             {view === 'all' && !topicId && meta ? (
               <Workbench
                 meta={meta}
@@ -1315,10 +1385,13 @@ function App() {
                   </div>
                 )}
                 <footer className="page-footer">
-                  个人知识收藏馆 <span>V1.7 · 本地私人知识空间</span>
+                  个人工作空间 <span>V1.0 · 本地私人知识空间与任务台</span>
                 </footer>
               </>
             )}
+          </div>
+          <div className={'tasks-host' + (tasksOpen ? ' is-active' : '')} aria-hidden={!tasksOpen}>
+            <TasksModule active={tasksOpen} />
           </div>
         </main>
       </div>

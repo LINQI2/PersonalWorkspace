@@ -1,0 +1,73 @@
+/* 知识库的全局标签选择器（p/h1/main/button…）不进入任务台作用域。 */
+.tw-app h1,
+.tw-app h2,
+.tw-app h3,
+.tw-app h4,
+.tw-app p,
+.tw-app ul,
+.tw-app ol,
+.tw-app li {
+  margin: 0;
+  padding: 0;
+  font-weight: inherit;
+  font-size: inherit;
+  letter-spacing: normal;
+  color: inherit;
+  line-height: inherit;
+}
+
+.tw-app button,
+.tw-app input,
+.tw-app textarea,
+.tw-app select {
+  font-family: inherit;
+  letter-spacing: normal;
+}
+
+.tw-app label small {
+  font-size: inherit;
+  color: inherit;
+}
+
+/* 统一工作空间外壳：任务台视图使用固定高度，避免与页面级滚动冲突。 */
+.shell.tasks-view {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.shell.tasks-view main {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.shell.tasks-view .topbar.global-topbar {
+  flex: 0 0 76px;
+}
+
+.shell.tasks-view .content {
+  display: none;
+}
+
+.tasks-host {
+  display: none;
+  flex: 1;
+  min-height: 0;
+}
+
+.tasks-host.is-active {
+  display: block;
+}
+
+/* 窄屏下任务台需要横向空间：侧栏可整体收起，主区域不留额外内边距 */
+@media (max-width: 760px) {
+  .shell.tasks-view .topbar.global-topbar {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .shell.tasks-view .topbar.global-topbar .top-brand,
+  .shell.tasks-view .topbar.global-topbar nav[aria-label='顶部一级导航'] {
+    display: none;
+  }
+}

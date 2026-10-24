@@ -1,14 +1,14 @@
-import { useEffect } from 'react'
-import type { ReactNode } from 'react'
+import { useEffect } from 'react';
+import type { ReactNode } from 'react';
 
 interface ConfirmDialogProps {
-  title: string
-  message: ReactNode
-  confirmText?: string
-  cancelText?: string
-  danger?: boolean
-  onConfirm: () => void
-  onCancel: () => void
+  title: string;
+  message: ReactNode;
+  confirmText?: string;
+  cancelText?: string;
+  danger?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
 }
 
 export default function ConfirmDialog({
@@ -22,16 +22,21 @@ export default function ConfirmDialog({
 }: ConfirmDialogProps) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel()
-      if (e.key === 'Enter') onConfirm()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onCancel, onConfirm])
+      if (e.key === 'Escape') onCancel();
+      if (e.key === 'Enter') onConfirm();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onCancel, onConfirm]);
 
   return (
     <div className="overlay overlay-center" onMouseDown={onCancel}>
-      <div className="dialog" onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+      <div
+        className="dialog"
+        onMouseDown={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+      >
         <h2 className="dialog-title">{title}</h2>
         <div className="dialog-body">{message}</div>
         <div className="dialog-actions">
@@ -49,5 +54,5 @@ export default function ConfirmDialog({
         </div>
       </div>
     </div>
-  )
+  );
 }

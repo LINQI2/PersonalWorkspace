@@ -1,9 +1,28 @@
-# 项目开发约定
+# PersonalWorkspace 开发约定（V1.0 整合轮）
+
+本项目是知识收藏馆 V1.9 与个人任务台的整合工程，一个 Node 进程、一个 React 应用、地址 `http://127.0.0.1:5180/`。
+
+- 先读 `README.md`、`docs/INTEGRATION_V1_0.md`、`docs/ARCHITECTURE.md`、`docs/HANDOFF.md`、`docs/TESTING.md`，再动代码。
+- 双库：`data/library.sqlite`（知识 schema11，禁止为任务整合改表）与 `data/tasks.db`（任务独立库）。任务服务端在 `app/server/tasks/`，前端在 `app/client/tasks/`，API 命名空间 `/api/tasks`。
+- 任务样式必须经 `scripts/scope-tasks-css.mjs` 生成 `.tw-app` 作用域版本；不要直接引入含 `:root`/`body`/`button` 全局选择器的 `styles.css`。新增样式一律限定 `.tw-app` 或 `.tw-app ...`。
+- 统一导航有五个入口：首页、任务台、收集箱、知识库、AI 助手。切换不得丢任务搜索/选中、知识筛选/滚动；任务模块保持挂载，知识视图用 `tasksOpen` 独立开关，不要用 `view='tasks'` 卸载知识组件。
+- 任务写操作必须保留：127.0.0.1 绑定、Host/Origin 校验、`X-PK-Request`、维护门、JSON 限额、ID/状态/父子/循环/长度服务端校验。不得新增 CORS、账号或对外监听。
+- 任务撤销为整表快照替换；若未来新增任务关联数据，必须同步扩展 `validateSnapshot`、`replaceAll` 与统一备份的校验，不得静默丢弃字段。
+- 统一备份必须保持：先校验全部数据、再保存当前快照、暂存目录、双库一起切换、复核、失败回滚并保留 `previous-workspace-*` 与恢复日志；旧知识库 ZIP 只恢复知识，旧任务 JSON 只替换任务。
+- 禁止在正式 `data/` 上做删除/覆盖/恢复测试；测试用临时目录或 `test-runtime/`（已忽略）。迁移脚本只读源项目，目标已有数据库时必须拒绝。
+- 不提交 `data/`、备份、日志、`.playwright-cli/`、临时验证脚本；不读取/打印 API Key，不调用真实付费 AI。
+- 每次变更执行 `npm run build`（含 tsc）、`npm test`；UI 变更执行 Edge 实测（1920/1366/390）并检查任务与知识两侧均无样式/状态回归。
+
+---
+
+# 知识库历史开发约定（V1.9 及以前）
+
+
 
 进入项目先读 README、docs/HANDOFF.md、docs/TESTING.md、docs/PRODUCT_REQUIREMENTS_V1.md、docs/PRODUCT_REQUIREMENTS_V1_1.md、docs/PRODUCT_REQUIREMENTS_V1_2.md、docs/PRODUCT_REQUIREMENTS_V1_3.md、docs/AI.md 和相关架构/设计文档。
 
 - 先检查 Git 状态、现有代码和数据，保护用户修改。
-- 当前停在 V1.9 交付点，V1～V1.7 保留；先读 docs/PRODUCT_REQUIREMENTS_V1_9.md、docs/DESIGN_V1_9.md、docs/PRODUCT_REQUIREMENTS_V1_8.md、docs/DESIGN_V1_8.md、docs/DESIGN_V1_7_3.md、docs/DESIGN_V1_7_2_AUDIT.md、docs/PRODUCT_REQUIREMENTS_V1_7_1.md、docs/IMPORT.md 与交换 Schema。不自动进入下一阶段，不执行 ROADMAP 候选网页抓取。
+- 知识库底座停在 V1.9 交付点，V1～V1.7 保留；整合轮见 docs/INTEGRATION_V1_0.md；先读 docs/PRODUCT_REQUIREMENTS_V1_9.md、docs/DESIGN_V1_9.md、docs/PRODUCT_REQUIREMENTS_V1_8.md、docs/DESIGN_V1_8.md、docs/DESIGN_V1_7_3.md、docs/DESIGN_V1_7_2_AUDIT.md、docs/PRODUCT_REQUIREMENTS_V1_7_1.md、docs/IMPORT.md 与交换 Schema。不自动进入下一阶段，不执行 ROADMAP 候选网页抓取。
 - 不删除/覆盖个人 data、附件或备份；不公开发布，不自动抓取网页。
 - schema 变更必须新增顺序迁移、备份与真实恢复测试，不能重新建库代替迁移。
 - 依赖使用 package-lock.json；不要偷偷更换架构。

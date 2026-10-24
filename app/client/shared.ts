@@ -56,6 +56,7 @@ export type Form = {
 };
 export type Meta = {
   version: string;
+  workspaceVersion?: string;
   dataPath: string;
   stats: {
     total: number;

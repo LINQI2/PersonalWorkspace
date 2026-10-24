@@ -1,4 +1,4 @@
-param([int]$Port = 3000)
+param([int]$Port = 5180)
 for ($attempt = 0; $attempt -lt 30; $attempt++) {
   try {
     $response = Invoke-WebRequest -Uri "http://127.0.0.1:$Port/api/meta" -UseBasicParsing -TimeoutSec 1

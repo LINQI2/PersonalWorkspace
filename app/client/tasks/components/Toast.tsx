@@ -1,24 +1,24 @@
-import { useEffect } from 'react'
-import { CloseIcon } from './Icons'
+import { useEffect } from 'react';
+import { CloseIcon } from './Icons';
 
 export interface ToastData {
-  id: number
-  message: string
-  tone?: 'default' | 'error'
-  actionLabel?: string
-  onAction?: () => void
+  id: number;
+  message: string;
+  tone?: 'default' | 'error';
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 interface ToastProps {
-  toast: ToastData
-  onClose: () => void
+  toast: ToastData;
+  onClose: () => void;
 }
 
 export default function Toast({ toast, onClose }: ToastProps) {
   useEffect(() => {
-    const timer = setTimeout(onClose, toast.actionLabel ? 8000 : 4000)
-    return () => clearTimeout(timer)
-  }, [toast.id, toast.actionLabel, onClose])
+    const timer = setTimeout(onClose, toast.actionLabel ? 8000 : 4000);
+    return () => clearTimeout(timer);
+  }, [toast.id, toast.actionLabel, onClose]);
 
   return (
     <div className={`toast ${toast.tone === 'error' ? 'is-error' : ''}`} role="status">
@@ -28,8 +28,8 @@ export default function Toast({ toast, onClose }: ToastProps) {
           type="button"
           className="toast-action"
           onClick={() => {
-            onClose()
-            toast.onAction?.()
+            onClose();
+            toast.onAction?.();
           }}
         >
           {toast.actionLabel}
@@ -39,5 +39,5 @@ export default function Toast({ toast, onClose }: ToastProps) {
         <CloseIcon size={12} />
       </button>
     </div>
-  )
+  );
 }

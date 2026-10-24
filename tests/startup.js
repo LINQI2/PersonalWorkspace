@@ -43,7 +43,7 @@ const launchEnv = {
 };
 async function launch() {
   let output = '';
-  const child = spawn('cmd.exe', ['/d', '/c', '启动知识库.bat', '-NoBrowser'], {
+  const child = spawn('cmd.exe', ['/d', '/c', '启动个人工作空间.bat', '-NoBrowser'], {
     cwd: root,
     env: launchEnv,
     windowsHide: true,

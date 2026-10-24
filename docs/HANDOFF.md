@@ -1,3 +1,21 @@
+# V1.0 个人工作空间交接 / 2026-10-24
+
+整合交付点。工作目录 `D:\Projects\PersonalWorkspace`，地址 `http://127.0.0.1:5180/`，启动/停止使用根目录 `启动个人工作空间.bat` / `停止个人工作空间.bat`。完整 Git SHA 见本节末尾与 `git log -1`。
+
+- 底座：知识收藏馆 V1.9（Git `c9cdc7adc2ed75c2c2b872d91b85d020567c1d0a`，schema 11）整体导入后成立新仓库；任务台以模块方式并入，React 18 组件保留原交互。
+- 数据：知识 `data/library.sqlite`（21 条内容/2 附件/2 导图/26 版本/1 专题）与任务 `data/tasks.db`（25 条/3 根/最大层级 4/已完成 1），来源与指纹见 `data/migration-report.json` 和 `docs/INTEGRATION_V1_0.md`。原两个项目未修改，可独立回滚使用。
+- 界面：统一顶栏/侧栏导航（首页、任务台、收集箱、知识库、AI 助手）；任务模块常驻挂载，切换不丢任务搜索/选中，也不卸载知识列表；`#tasks` 可刷新保持。
+- 安全：任务 API 复用 127.0.0.1/Host/Origin/X-PK-Request/session/维护门；服务端校验 ID、状态、父子、循环、大小；无文件访问暴露。
+- 备份：设置→数据与备份→完整工作空间备份（manifest + knowledge.zip + tasks.db + tasks.json + SHA-256）；恢复前校验、快照、暂存、双库切换、复核、失败回滚；旧知识 ZIP 只恢复知识，旧任务 JSON 只替换任务。
+- 修复：知识库恢复跨盘 `renameSync EXDEV`（C: 临时目录 → D: data）缺陷，改为 fallback 复制；任务整表替换父子写入顺序与外键；任务库 `user_version` 迁移。
+- AI：DPAPI 凭据与旧数据目录绑定，未迁移、未读取；新站点需重新录入。旧 `:3000` 的 localStorage（主题/折叠/上次阅读/快速记录恢复副本）不会共享，服务器端草稿已随数据迁移。
+- 验证：`npm test` 95/95；Edge 1920/1366/390 实测任务树/右键/拖拽/撤销/备注/恢复/启动停止；统一备份恢复与损坏回滚、旧格式兼容均在真实数据副本上演练。
+- 常用命令：`npm run build`、`npm run typecheck`、`npm test`、`node scripts/migrate-legacy.mjs`（一次性，目标已有库会拒绝）。正式 data 目录不要提交；迁移/恢复前先停止或使用统一备份。
+
+下一次继续开发前：`git status`、`git log -1`、确认 `data/migration-report.json` 与备份可用；不要把正式库用于破坏性测试。
+
+---
+
 # V1.9 交接 / 2026-10-15
 
 开工HEAD ff880adb88b70752a11e323429fbbf9b594e7e9f，工作树干净，正式schema10/34表/17内容。用户附件已保存为PRODUCT_REQUIREMENTS_V1_9.md。本轮新增mind-elixir稳定5.15.1（MIT），无新Provider、付费插件、网页抓取或全库AI任务。

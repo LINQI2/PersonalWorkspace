@@ -14,8 +14,8 @@ try {
   }
   & node scripts/launcher.js
   if ($LASTEXITCODE -ne 0) { throw 'Launch failed. See the reason above; no existing process was forcibly stopped.' }
-  $libraryPort = if ($env:PORT) { $env:PORT } else { '3000' }
-  if (-not $NoBrowser) { Start-Process "http://127.0.0.1:$libraryPort" }
+  $port = if ($env:PORT) { $env:PORT } else { '5180' }
+  if (-not $NoBrowser) { Start-Process "http://127.0.0.1:$port" }
 } catch {
   Write-Host "Startup failed: $($_.Exception.Message)" -ForegroundColor Red
   exit 1

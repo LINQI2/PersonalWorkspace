@@ -31,7 +31,15 @@ import sharp from 'sharp';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, writeFileSync, renameSync, existsSync, rmSync, readFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  writeFileSync,
+  renameSync,
+  existsSync,
+  rmSync,
+  readFileSync,
+  cpSync,
+} from 'node:fs';
 import { openStore, kinds, hydrate, saveEntry, VERSION } from './store.js';
 import { createMark, updateMark, readingMarks, readingTargets, markDetail } from './reading.js';
 import { createPasteSession } from './paste.js';
@@ -48,6 +56,14 @@ import {
 } from './topics.js';
 import { exportBackup, validateBackup } from './backup.js';
 import { recoverInterruptedRestore, journalName } from './recovery.js';
+import { createTaskStore, analyzeTasks } from './tasks/store.js';
+import { createTaskRouter } from './tasks/router.js';
+import {
+  buildWorkspaceBackup,
+  classifyBackup,
+  inspectWorkspaceBackup,
+} from './workspace-backup.js';
+import { recoverWorkspaceRestore, restoreWorkspaceBackup } from './workspace-restore.js';
 import {
   readWorkspace,
   writeWorkspace,
@@ -79,6 +95,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 export function createApp(dataDir = path.join(root, 'data'), options = {}) {
   const dir = path.resolve(dataDir);
   mkdirSync(dir, { recursive: true });
+  recoverWorkspaceRestore(dir);
   recoverInterruptedRestore(dir);
   readWorkspace(dir);
   const open = () =>
@@ -91,6 +108,14 @@ export function createApp(dataDir = path.join(root, 'data'), options = {}) {
   let db = open();
   try {
     readWorkspace(dir);
+  } catch (e) {
+    db.close();
+    throw e;
+  }
+  const openTasks = () => createTaskStore({ dbFile: path.join(dir, 'tasks.db') });
+  let tasks;
+  try {
+    tasks = openTasks();
   } catch (e) {
     db.close();
     throw e;
@@ -131,6 +156,10 @@ export function createApp(dataDir = path.join(root, 'data'), options = {}) {
   const maintenance = (req, res, next) =>
     busy ? res.status(503).json({ error: '正在备份或恢复，请稍后重试。' }) : next();
   app.use('/api', maintenance);
+  app.use(
+    '/api/tasks',
+    createTaskRouter(() => tasks),
+  );
   const ai = createAiService(dir, () => db, options.ai);
   const credentialGuard = (req, res, next) =>
     req.headers.origin === `http://${req.headers.host}` &&
@@ -405,21 +434,26 @@ export function createApp(dataDir = path.join(root, 'data'), options = {}) {
       : res.status(403).json({ error: '缺少本地请求标记。' }),
   );
   app.get('/api/local/status', (_req, res) =>
-    res.json({ canStop: !!options.onShutdown, version: '1.9.0' }),
+    res.json({
+      canStop: !!options.onShutdown,
+      version: '1.9.0',
+      workspaceVersion: '1.0.0',
+    }),
   );
   app.get('/api/local/instance', (req, res) =>
     options.instanceToken && req.headers['x-pk-instance'] === options.instanceToken
       ? res.json({
-          application: 'PersonalKnowledge',
+          application: 'PersonalWorkspace',
           projectRoot: root,
           dataPath: dir,
           pid: process.pid,
+          workspaceVersion: '1.0.0',
         })
       : res.status(403).json({ error: '无法确认本地实例。' }),
   );
   app.post('/api/local/shutdown', credentialGuard, (req, res) => {
-    if (!options.onShutdown || req.body?.confirm !== '停止知识库')
-      return res.status(400).json({ error: '请明确确认停止当前知识库。' });
+    if (!options.onShutdown || !['停止个人工作空间', '停止知识库'].includes(req.body?.confirm))
+      return res.status(400).json({ error: '请明确确认停止当前个人工作空间。' });
     if (busy || uploads)
       return res.status(409).json({ error: '正在备份、恢复或上传，请完成后再停止。' });
     ai.cancel();
@@ -507,9 +541,11 @@ export function createApp(dataDir = path.join(root, 'data'), options = {}) {
   app.get('/api/meta', (_req, res) =>
     res.json({
       version: '1.9.0',
+      workspaceVersion: '1.0.0',
       recent: recentTaxonomy(db),
       schemaVersion: VERSION,
       dataPath: dir,
+      tasks: tasks.stats(),
       stats: {
         total: db.prepare('SELECT count(*) n FROM entries').get().n,
         pending: db
@@ -993,11 +1029,21 @@ export function createApp(dataDir = path.join(root, 'data'), options = {}) {
       const safe = path.join(dir, 'backups', 'before-restore-' + Date.now() + '.zip');
       writeFileSync(safe, bytes);
       mkdirSync(stage);
+      // 临时解压目录可能在系统盘，data 可能在其他盘：rename 跨盘会失败，需回退为复制。
+      const relocate = (from, to) => {
+        try {
+          renameSync(from, to);
+        } catch (error) {
+          if (error.code !== 'EXDEV') throw error;
+          cpSync(from, to, { recursive: true });
+          rmSync(from, { recursive: true, force: true });
+        }
+      };
       if (existsSync(path.join(checked.tmp, workspaceName)))
-        renameSync(path.join(checked.tmp, workspaceName), path.join(stage, workspaceName));
+        relocate(path.join(checked.tmp, workspaceName), path.join(stage, workspaceName));
       else writeFileSync(path.join(stage, workspaceName), JSON.stringify(defaultWorkspace()));
-      renameSync(path.join(checked.tmp, 'library.sqlite'), path.join(stage, 'library.sqlite'));
-      renameSync(path.join(checked.tmp, 'attachments'), path.join(stage, 'attachments'));
+      relocate(path.join(checked.tmp, 'library.sqlite'), path.join(stage, 'library.sqlite'));
+      relocate(path.join(checked.tmp, 'attachments'), path.join(stage, 'attachments'));
       mkdirSync(old);
       writeFileSync(path.join(dir, journalName), JSON.stringify({ previous: path.basename(old) }));
       db.exec('PRAGMA wal_checkpoint(TRUNCATE)');
@@ -1040,6 +1086,166 @@ export function createApp(dataDir = path.join(root, 'data'), options = {}) {
       busy = false;
     }
   });
+  const workspaceUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 512 * 1024 * 1024, files: 1 },
+  });
+  app.get('/api/workspace/info', (_req, res) => {
+    const schema = db.prepare('PRAGMA user_version').get().user_version;
+    res.json({
+      workspaceVersion: '1.0.0',
+      knowledgeVersion: '1.9.0',
+      dataPath: dir,
+      backupDir: path.join(dir, 'backups'),
+      knowledgeSchema: schema,
+      tasks: { ...tasks.stats(), dbFile: path.join(dir, 'tasks.db') },
+      knowledge: {
+        entries: db.prepare('SELECT COUNT(*) n FROM entries').get().n,
+        attachments: db.prepare('SELECT COUNT(*) n FROM assets').get().n,
+      },
+    });
+  });
+  app.post('/api/workspace/backup', async (_req, res, next) => {
+    if (uploads) return res.status(503).json({ error: '图片仍在上传，请稍后备份。' });
+    busy = true;
+    try {
+      const { bytes, manifest } = await buildWorkspaceBackup({
+        dataDir: dir,
+        db,
+        taskStore: tasks,
+        appVersion: '1.0.0',
+      });
+      res
+        .type('application/zip')
+        .attachment('PersonalWorkspace-' + manifest.createdAt.slice(0, 10) + '.zip')
+        .send(bytes);
+    } catch (e) {
+      next(e);
+    } finally {
+      busy = false;
+    }
+  });
+  app.post(
+    '/api/workspace/restore/inspect',
+    workspaceUpload.single('backup'),
+    maintenance,
+    (req, res, next) => {
+      try {
+        if (!req.file) throw new Error('请选择备份文件。');
+        const kind = classifyBackup(req.file.buffer);
+        if (kind === 'knowledge') {
+          const checked = validateBackup(req.file.buffer);
+          try {
+            res.json({ type: 'knowledge', count: checked.count, createdAt: checked.createdAt });
+          } finally {
+            checked.dispose();
+          }
+          return;
+        }
+        if (kind !== 'workspace') throw new Error('无法识别的备份格式，已拒绝读取。');
+        const parsed = inspectWorkspaceBackup(req.file.buffer);
+        try {
+          res.json({
+            type: 'workspace',
+            createdAt: parsed.manifest.createdAt,
+            knowledge: parsed.knowledge,
+            tasks: parsed.tasks,
+          });
+        } finally {
+          parsed.dispose();
+        }
+      } catch (e) {
+        next(e);
+      }
+    },
+  );
+  app.post(
+    '/api/workspace/restore',
+    workspaceUpload.single('backup'),
+    maintenance,
+    async (req, res, next) => {
+      if (uploads) return res.status(503).json({ error: '图片仍在上传，请稍后恢复。' });
+      if (!req.file) throw new Error('请选择备份文件。');
+      if (req.body.confirm !== '恢复工作空间') throw new Error('请输入恢复确认文字。');
+      const kind = classifyBackup(req.file.buffer);
+      if (kind === 'knowledge')
+        return res.status(409).json({
+          error:
+            '这是旧版知识库备份。请在同一窗口使用下方「旧版知识库备份」入口；该操作只恢复知识库，任务台数据保持不变。',
+          code: 'legacy_knowledge',
+        });
+      if (kind !== 'workspace') throw new Error('无法识别的备份格式，已拒绝恢复。');
+      let parsed;
+      busy = true;
+      try {
+        parsed = inspectWorkspaceBackup(req.file.buffer);
+        const result = await restoreWorkspaceBackup({
+          parsed,
+          dataDir: dir,
+          getDb: () => db,
+          getTasks: () => tasks,
+          buildSafetyBackup: async () =>
+            (
+              await buildWorkspaceBackup({
+                dataDir: dir,
+                db,
+                taskStore: tasks,
+                appVersion: '1.0.0',
+              })
+            ).bytes,
+          closeKnowledge: () => db.close(),
+          openKnowledge: () => open(),
+          openTasks,
+          setKnowledgeDb: (next) => {
+            db = next;
+          },
+          setTasks: (next) => {
+            tasks = next;
+          },
+          setBusy: (value) => {
+            busy = value;
+          },
+        });
+        res.json(result);
+      } catch (e) {
+        next(e);
+      } finally {
+        parsed?.dispose();
+        busy = false;
+      }
+    },
+  );
+  app.post('/api/workspace/tasks/import', async (req, res, next) => {
+    if (uploads) return res.status(503).json({ error: '图片仍在上传，请稍后导入。' });
+    if (req.body?.confirm !== '导入任务备份') throw new Error('请确认导入任务备份。');
+    const before = tasks.exportPayload();
+    const beforeAnalysis = analyzeTasks(before.tasks);
+    const incoming = tasks.validateSnapshot(req.body?.payload);
+    busy = true;
+    try {
+      mkdirSync(path.join(dir, 'backups'), { recursive: true });
+      const snapshot = path.join(dir, 'backups', 'tasks-before-import-' + Date.now() + '.json');
+      writeFileSync(snapshot, JSON.stringify(before, null, 2), 'utf8');
+      const restored = tasks.replaceAll({ tasks: incoming });
+      const after = analyzeTasks(restored);
+      const expected = analyzeTasks(incoming);
+      if (after.digest !== expected.digest) {
+        tasks.replaceAll(before);
+        throw new Error('导入后核对失败，已回滚到导入前的任务数据。');
+      }
+      res.json({
+        ok: true,
+        count: after.total,
+        analysis: after,
+        before: beforeAnalysis,
+        snapshot,
+      });
+    } catch (e) {
+      next(e);
+    } finally {
+      busy = false;
+    }
+  });
   app.use('/api', (_req, res) => res.status(404).json({ error: '接口不存在。' }));
   app.use(express.static(path.join(root, 'dist')));
   app.get('/{*rest}', (_req, res) => res.sendFile(path.join(root, 'dist', 'index.html')));
@@ -1058,7 +1264,19 @@ export function createApp(dataDir = path.join(root, 'data'), options = {}) {
             : err.message || '操作失败，请重试。',
     });
   });
-  return { app, close: () => db.close(), getDb: () => db };
+  return {
+    app,
+    close: () => {
+      try {
+        tasks.close();
+      } catch {
+        /* ignore */
+      }
+      db.close();
+    },
+    getDb: () => db,
+    getTasks: () => tasks,
+  };
 }
 // Read attachment paths from an isolated, already validated backup.
 import { DatabaseSync } from 'node:sqlite';
@@ -1080,7 +1298,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   }
   let release;
   try {
-    const dataDir = path.resolve(process.env.PK_DATA_DIR || path.join(root, 'data'));
+    const dataDir = path.resolve(
+      process.env.PW_DATA_DIR || process.env.PK_DATA_DIR || path.join(root, 'data'),
+    );
     release = acquireDataLock(dataDir);
     process.once('exit', release);
     let server,
@@ -1098,12 +1318,12 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       readFileSync(path.join(dataDir, '.server-lock.json'), 'utf8'),
     ).token;
     const { app, close } = createApp(dataDir, { instanceToken, onShutdown: stop });
-    const port = Number(process.env.PORT || 3000);
+    const port = Number(process.env.PORT || 5180);
     server = app.listen(port, '127.0.0.1', (error) =>
       error
         ? undefined
         : console.log(
-            `个人知识收藏馆已启动：http://127.0.0.1:${port}\n前台按 Ctrl+C；后台使用停止脚本或网页设置正常停止。`,
+            `个人工作空间已启动：http://127.0.0.1:${port}\n前台按 Ctrl+C；后台使用停止脚本或网页设置正常停止。`,
           ),
     );
     server.on('error', (e) => {

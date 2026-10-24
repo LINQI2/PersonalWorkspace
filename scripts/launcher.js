@@ -14,8 +14,10 @@ import { spawn, execFileSync } from 'node:child_process';
 import net from 'node:net';
 import { acquireDataLock, inspectProcess } from '../app/server/lock.js';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const dir = path.resolve(process.env.PK_DATA_DIR || path.join(root, 'data'));
-const port = Number(process.env.PORT || 3000);
+const dir = path.resolve(
+  process.env.PW_DATA_DIR || process.env.PK_DATA_DIR || path.join(root, 'data'),
+);
+const port = Number(process.env.PORT || 5180);
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
   console.error('Invalid local port.');
   process.exit(1);
@@ -112,7 +114,7 @@ async function probe() {
       }
       if (
         path.resolve(meta.dataPath || '').toLowerCase() !== dir.toLowerCase() ||
-        !/^1\.[23456789]\./.test(meta.version || '')
+        meta.workspaceVersion !== '1.0.0'
       )
         throw Error(
           'The port belongs to a different application or data directory. No process was stopped.',
@@ -123,14 +125,14 @@ async function probe() {
           headers: { 'X-PK-Instance': lock.token },
         });
         if (
-          instance.application !== 'PersonalKnowledge' ||
+          instance.application !== 'PersonalWorkspace' ||
           instance.pid !== lock.pid ||
           path.resolve(instance.projectRoot).toLowerCase() !== root.toLowerCase()
         )
           throw Error();
         legacy = false;
       } catch {
-        if (meta.version === '1.3.1' || /^1\.[456789]\./.test(meta.version || ''))
+        if (meta.workspaceVersion === '1.0.0')
           throw Error('The project instance could not be authenticated. Preserve the lock.');
       }
       return { running: true, legacy };
@@ -146,7 +148,7 @@ const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 async function stop() {
   const state = await probe();
   if (!state.running) {
-    console.log('知识库当前未运行。');
+    console.log('个人工作空间当前未运行。');
     return;
   }
   if (state.legacy)
@@ -160,11 +162,11 @@ async function stop() {
       Origin: base,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ confirm: '停止知识库' }),
+    body: JSON.stringify({ confirm: '停止个人工作空间' }),
   });
   for (let i = 0; i < 50; i++) {
     if (!existsSync(file) && !(await listening())) {
-      console.log('知识库已正常停止，数据和安全配置已保留。');
+      console.log('个人工作空间已正常停止，数据和安全配置已保留。');
       return;
     }
     await pause(200);
@@ -244,7 +246,7 @@ async function start() {
       console.log(
         initial.legacy
           ? '旧版知识库正在运行；请在原窗口 Ctrl+C 停止一次后重开，以使用新设置。'
-          : '知识库已经正常运行，正在打开网页；不会重复启动。',
+          : '个人工作空间已经正常运行，正在打开网页；不会重复启动。',
       );
       return;
     }
@@ -284,7 +286,7 @@ async function start() {
       try {
         if ((await probe()).running) {
           console.log(
-            '知识库已在后台启动，此窗口可关闭。正常停止请使用「停止知识库.bat」或网页设置。',
+            '个人工作空间已在后台启动，此窗口可关闭。正常停止请使用「停止个人工作空间.bat」或网页设置。',
           );
           return;
         }

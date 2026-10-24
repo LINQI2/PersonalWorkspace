@@ -135,6 +135,15 @@ export function SettingsPanel({
   const [backupFile, setBackupFile] = useState<File | null>(null);
   const [inspection, setInspection] = useState<{ count: number; createdAt: string } | null>(null);
   const [confirmation, setConfirmation] = useState('');
+  const [wsFile, setWsFile] = useState<File | null>(null);
+  const [wsInfo, setWsInfo] = useState<{
+    type: 'workspace' | 'knowledge';
+    createdAt?: string;
+    count?: number;
+    knowledge?: { count: number };
+    tasks?: { count: number };
+  } | null>(null);
+  const [wsConfirm, setWsConfirm] = useState('');
   const [drafts, setDrafts] = useState<
     { key: string; title: string; savedAt: string; missingEntry: boolean }[]
   >([]);
@@ -407,12 +416,160 @@ export function SettingsPanel({
           <button onClick={() => setCleanup(true)}>查看旧知识清理候选（只读）</button>
           <div className="storage-info">
             <span>软件版本</span>
-            <strong>{meta.version}</strong>
+            <strong>
+              个人工作空间 {meta.workspaceVersion || '1.0.0'} · 知识库 {meta.version}
+            </strong>
             <span>本地存储路径</span>
             <code>{meta.dataPath}</code>
           </div>
+          <div className="workspace-backup">
+            <h4>完整工作空间备份（知识库 + 任务台）</h4>
+            <p className="muted">
+              一次导出知识库数据库、附件、偏好与任务树。恢复前会分别校验知识库与任务库，再一起切换；任何一步失败都会回滚到当前数据。
+            </p>
+            <div className="settings-shortcuts">
+              <button
+                className="button"
+                disabled={busy}
+                onClick={() =>
+                  run(async () => {
+                    const res = await fetch('/api/workspace/backup', {
+                      method: 'POST',
+                      headers: { 'X-PK-Request': '1' },
+                    });
+                    if (!res.ok) throw new Error((await res.json()).error);
+                    const url = URL.createObjectURL(await res.blob());
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = '个人工作空间-' + new Date().toISOString().slice(0, 10) + '.zip';
+                    a.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 10000);
+                    notify('工作空间备份已导出');
+                  })
+                }
+              >
+                <Download size={17} />
+                导出工作空间备份
+              </button>
+              <label className="button">
+                选择工作空间备份
+                <input
+                  aria-label="导入工作空间备份"
+                  disabled={busy}
+                  type="file"
+                  accept=".zip"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = '';
+                    setWsFile(f || null);
+                    setWsInfo(null);
+                    setWsConfirm('');
+                    if (f)
+                      run(async () => {
+                        const fd = new FormData();
+                        fd.append('backup', f);
+                        setWsInfo(
+                          await api('/workspace/restore/inspect', { method: 'POST', body: fd }),
+                        );
+                      });
+                  }}
+                />
+              </label>
+            </div>
+            {wsFile && <small className="file-name">{wsFile.name}</small>}
+            {wsInfo && (
+              <div className="restore-confirm">
+                <p>
+                  {wsInfo.type === 'workspace'
+                    ? `已校验：知识 ${wsInfo.knowledge?.count ?? 0} 条 · 任务 ${wsInfo.tasks?.count ?? 0} 条 · ${new Date(wsInfo.createdAt || Date.now()).toLocaleString('zh-CN')}`
+                    : `旧版知识库备份：${wsInfo.count ?? 0} 条收藏。恢复只替换知识库，任务台数据不会改变。`}
+                </p>
+                <label>
+                  输入「{wsInfo.type === 'workspace' ? '恢复工作空间' : '恢复当前知识库'}
+                  」进行二次确认
+                  <input
+                    aria-label="工作空间恢复确认文字"
+                    value={wsConfirm}
+                    onChange={(e) => setWsConfirm(e.target.value)}
+                  />
+                </label>
+                <button
+                  className="danger"
+                  disabled={
+                    busy ||
+                    !wsFile ||
+                    wsConfirm !== (wsInfo.type === 'workspace' ? '恢复工作空间' : '恢复当前知识库')
+                  }
+                  onClick={() =>
+                    run(async () => {
+                      if (!wsFile || !wsInfo) return;
+                      const fd = new FormData();
+                      fd.append('backup', wsFile);
+                      fd.append('confirm', wsConfirm);
+                      if (wsInfo.type === 'workspace') {
+                        await api('/workspace/restore', { method: 'POST', body: fd });
+                        notify('工作空间恢复完成，正在重新加载…');
+                        setTimeout(() => location.reload(), 900);
+                      } else {
+                        await api('/restore', { method: 'POST', body: fd });
+                        setWsInfo(null);
+                        setWsFile(null);
+                        setWsConfirm('');
+                        onRestore();
+                        notify('知识库已恢复；任务台数据保持不变。');
+                      }
+                    })
+                  }
+                >
+                  确认恢复
+                </button>
+              </div>
+            )}
+            <div className="task-import">
+              <h4>兼容导入旧任务台 JSON</h4>
+              <p className="muted">
+                仅替换任务台数据，知识库不受影响；导入前自动保存当前任务快照，导入后核对数量与结构。
+              </p>
+              <label className="button">
+                选择任务 JSON
+                <input
+                  aria-label="导入旧任务台备份"
+                  disabled={busy}
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = '';
+                    if (!f) return;
+                    run(async () => {
+                      let payload: any;
+                      try {
+                        payload = JSON.parse(await f.text());
+                      } catch {
+                        throw new Error('任务备份不是合法的 JSON');
+                      }
+                      const incoming = Array.isArray(payload) ? payload : payload?.tasks;
+                      if (!Array.isArray(incoming)) throw new Error('任务备份缺少 tasks 任务列表');
+                      if (
+                        !confirm(
+                          `将用备份中的 ${incoming.length} 个任务替换当前任务台数据，知识库不受影响。导入前会自动保存当前任务快照。确认继续？`,
+                        )
+                      )
+                        return;
+                      const result = await api('/workspace/tasks/import', {
+                        method: 'POST',
+                        body: JSON.stringify({ confirm: '导入任务备份', payload }),
+                      });
+                      notify(`任务导入完成：${result.count} 条；正在重新加载…`);
+                      setTimeout(() => location.reload(), 900);
+                    });
+                  }}
+                />
+              </label>
+            </div>
+          </div>
           <p className="muted">
-            备份包含数据库一致性快照、全部图片、本地草稿和浏览偏好。移除图片引用后，文件仍保留，避免其他笔记丢图。
+            下面的入口只备份/恢复知识库，与上面的完整工作空间备份互不影响。移除图片引用后，文件仍保留，避免其他笔记丢图。
           </p>
           <button
             className="button"

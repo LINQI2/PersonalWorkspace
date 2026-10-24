@@ -389,7 +389,7 @@ export function LocalServiceControl() {
     <section className="local-service">
       <h3>本地网站运行</h3>
       <p className="muted">
-        关闭网页或启动窗口不会停止后台。使用此处或「停止知识库.bat」正常停止；下次双击启动即可继续。停止前保存其他页面的编辑内容。
+        关闭网页或启动窗口不会停止后台。使用此处或「停止个人工作空间.bat」正常停止；下次双击启动即可继续。停止前保存其他页面的编辑内容。
       </p>
       {error && (
         <p className="error" role="alert">
@@ -408,7 +408,7 @@ export function LocalServiceControl() {
               return;
             setBusy(true);
             try {
-              await protectedApi('/local/shutdown', { confirm: '停止知识库' });
+              await protectedApi('/local/shutdown', { confirm: '停止个人工作空间' });
               setStopped(true);
             } catch (e) {
               setError((e as Error).message);

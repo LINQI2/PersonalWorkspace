@@ -11,3 +11,7 @@ playwright-report/
 *.dpapi.json*
 *.log
 .test-data-*
+test-runtime/
+verify-*.tmp.mjs
+.migration-source/
+.playwright-cli/

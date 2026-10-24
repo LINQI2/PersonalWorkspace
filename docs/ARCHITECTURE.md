@@ -1,3 +1,16 @@
+# V1.0 个人工作空间 / 双库单进程
+
+PersonalWorkspace 以知识收藏馆 V1.9 工程为底座，在同一 Node 24 / Express 5 进程中同时提供知识库与任务台，浏览器只有一个来源 `http://127.0.0.1:5180/`。
+
+- 数据：`data/library.sqlite`（schema11，未改表）+ `data/tasks.db`（任务独立库，user_version=1，WAL/外键）。不把任务塞进知识 schema，也不引入第二服务。
+- 服务端：`app/server/tasks/store.js` 负责任务事务/校验/导入，`router.js` 挂载 `/api/tasks`；`workspace-backup.js` 组装统一 ZIP，`workspace-restore.js` 执行带日志、暂存、快照与回滚的双库切换；`index.js` 只增加接线与 `/api/workspace/*` 入口。任务 API 完全复用 Host/Origin/X-PK-Request/session/维护门/JSON 限额。
+- 前端：`app/client/tasks/*` 为原任务台模块，`styles.css` 经 `scripts/scope-tasks-css.mjs` 生成 `.tw-app` 作用域样式；`main.tsx` 新增 `tasksOpen` 状态与「任务台」导航，知识视图保持挂载以保留筛选/滚动；`workspace.css` 负责外壳高度与标签重置。
+- 备份：统一 ZIP = manifest + 知识标准 ZIP + tasks.db + tasks.json + README；恢复先完整校验、再快照、再关闭/搬移/切换/复核，失败回滚并保留 previous 目录与日志。
+- 兼容：旧知识库 ZIP 只恢复知识库；旧任务 JSON 只替换任务。AI 凭据 DPAPI 未迁移，需重新授权；旧源浏览器 localStorage 不共享。
+- 详细决策、迁移核对、验证矩阵见 [INTEGRATION_V1_0](INTEGRATION_V1_0.md)。启动仍沿用原 launcher 身份锁/实例令牌，仅把端口改为 5180、应用标识改为 PersonalWorkspace。
+
+---
+
 # V1.9 思维导图 / schema11
 
 保持Node24、Express、SQLite、React19、TypeScript、Vite和Tiptap；仅新增MIT mind-elixir@5.15.1，锁文件固定版本。MindmapEditor在挂载/卸载时管理本地实例，提供画布/文字大纲/属性与连线面板，禁用任意HTML/图片/外链插件入口。导图引擎独立Vite chunk约93KB原始/30KB gzip，没有新增后台服务或云请求。

@@ -1,0 +1,31 @@
+/* 任务台接入统一外壳时的少量布局补充，全部限定在 .tw-app 内。 */
+.tw-app .module-toolbar {
+  height: 52px;
+  flex: 0 0 52px;
+  padding: 0 14px;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.tw-app .module-toolbar .search-box {
+  flex: 0 1 340px;
+  min-width: 160px;
+}
+
+.tw-app .module-toolbar .topbar-actions {
+  margin-left: auto;
+}
+
+.tw-app .toolbar-hint {
+  font-size: 12px;
+  color: var(--ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1180px) {
+  .tw-app .toolbar-hint {
+    display: none;
+  }
+}

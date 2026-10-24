@@ -1,21 +1,21 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { CheckIcon, ChevronIcon, PlusIcon, StatusIcon, TrashIcon } from './Icons'
-import { STATUS_META, STATUS_ORDER } from '../types'
-import type { Task, TaskStatus } from '../types'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { CheckIcon, ChevronIcon, PlusIcon, StatusIcon, TrashIcon } from './Icons';
+import { STATUS_META, STATUS_ORDER } from '../types';
+import type { Task, TaskStatus } from '../types';
 
 interface ContextMenuProps {
-  x: number
-  y: number
-  task: Task
-  hasChildren: boolean
-  childCount: number
-  onClose: () => void
-  onAddSibling: () => void
-  onAddChild: () => void
-  onRename: () => void
-  onSetStatus: (status: TaskStatus) => void
-  onToggleCollapse: () => void
-  onDelete: () => void
+  x: number;
+  y: number;
+  task: Task;
+  hasChildren: boolean;
+  childCount: number;
+  onClose: () => void;
+  onAddSibling: () => void;
+  onAddChild: () => void;
+  onRename: () => void;
+  onSetStatus: (status: TaskStatus) => void;
+  onToggleCollapse: () => void;
+  onDelete: () => void;
 }
 
 export default function ContextMenu({
@@ -32,39 +32,39 @@ export default function ContextMenu({
   onToggleCollapse,
   onDelete,
 }: ContextMenuProps) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [pos, setPos] = useState({ left: x, top: y })
-  const [statusOpen, setStatusOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ left: x, top: y });
+  const [statusOpen, setStatusOpen] = useState(false);
 
   useLayoutEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const rect = el.getBoundingClientRect()
-    const left = Math.max(10, Math.min(x, window.innerWidth - rect.width - 10))
-    const top = Math.max(10, Math.min(y, window.innerHeight - rect.height - 10))
-    setPos({ left, top })
-  }, [x, y, statusOpen])
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const left = Math.max(10, Math.min(x, window.innerWidth - rect.width - 10));
+    const top = Math.max(10, Math.min(y, window.innerHeight - rect.height - 10));
+    setPos({ left, top });
+  }, [x, y, statusOpen]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   const run = (fn: () => void) => () => {
-    onClose()
-    fn()
-  }
+    onClose();
+    fn();
+  };
 
   return (
     <div
       className="overlay"
       onMouseDown={onClose}
       onContextMenu={(e) => {
-        e.preventDefault()
-        onClose()
+        e.preventDefault();
+        onClose();
       }}
     >
       <div
@@ -134,5 +134,5 @@ export default function ContextMenu({
         </button>
       </div>
     </div>
-  )
+  );
 }
