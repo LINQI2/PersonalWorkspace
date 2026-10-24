@@ -1,0 +1,41 @@
+{
+  "format": "personal-knowledge-exchange",
+  "version": 2,
+  "domains": [
+    {
+      "id": "research",
+      "name": "合成研究领域"
+    },
+    {
+      "id": "practice",
+      "name": "合成实践子领域",
+      "parent": "research"
+    }
+  ],
+  "sources": [
+    {
+      "id": "sample",
+      "kind": "chatgpt",
+      "title": "合成对话资料",
+      "excerpt": "先建立可检验假设，再记录证据和不确定性。",
+      "original_date": null
+    }
+  ],
+  "items": [
+    {
+      "id": "unsafe",
+      "content_type": "bookmark",
+      "title": "恶意网址",
+      "url": "javascript:alert(1)",
+      "body": "拒绝此记录"
+    }
+  ],
+  "relations": [
+    {
+      "from": "note",
+      "to": "chapter",
+      "kind": "complement",
+      "note": "人工审核的互补候选"
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "format": "personal-knowledge-exchange",
+  "version": 2,
+  "domains": [
+    {
+      "id": "research",
+      "name": "合成研究领域"
+    },
+    {
+      "id": "practice",
+      "name": "合成实践子领域",
+      "parent": "research"
+    }
+  ],
+  "sources": [
+    {
+      "id": "sample",
+      "kind": "chatgpt",
+      "title": "合成对话资料",
+      "excerpt": "先建立可检验假设，再记录证据和不确定性。",
+      "original_date": null
+    }
+  ],
+  "items": [
+    {
+      "id": "note",
+      "content_type": "note",
+      "title": "实验笔记",
+      "body": "记录实验步骤与尚未确认的判断。",
+      "primary_domain": "practice",
+      "references": [
+        {
+          "source_id": "sample",
+          "quote": ""
+        }
+      ]
+    },
+    {
+      "id": "site",
+      "content_type": "bookmark",
+      "title": "示例网站",
+      "url": "https://example.com/",
+      "body": "这是用户提供的网址，没有抓取网页正文。",
+      "primary_domain": "research"
+    },
+    {
+      "id": "tool",
+      "content_type": "tool",
+      "tool_kind": "custom",
+      "title": "离线小工具",
+      "body": "手工运行的工具；知识馆不会启动本地程序。"
+    },
+    {
+      "id": "doc",
+      "content_type": "document",
+      "title": "实验综合文档",
+      "body": "保留概览，再按章节组织证据。",
+      "primary_domain": "research"
+    },
+    {
+      "id": "chapter",
+      "content_type": "block",
+      "parent": "doc",
+      "title": "证据与待验证事项",
+      "body": "先建立可检验假设，再记录证据和不确定性。",
+      "references": [
+        {
+          "source_id": "sample",
+          "quote": "先建立可检验假设"
+        }
+      ],
+      "epistemic": "ai_inference"
+    }
+  ],
+  "relations": [
+    {
+      "from": "note",
+      "to": "chapter",
+      "kind": "complement",
+      "note": "人工审核的互补候选"
+    }
+  ]
+}
