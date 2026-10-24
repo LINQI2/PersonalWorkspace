@@ -1,6 +1,6 @@
 # V1.0 个人工作空间交接 / 2026-10-24
 
-整合交付点。工作目录 `D:\Projects\PersonalWorkspace`，地址 `http://127.0.0.1:5180/`，启动/停止使用根目录 `启动个人工作空间.bat` / `停止个人工作空间.bat`。完整 Git SHA 见本节末尾与 `git log -1`。
+整合交付点。工作目录 `D:\Projects\PersonalWorkspace`，地址 `http://127.0.0.1:5180/`，启动/停止使用根目录 `启动个人工作空间.bat` / `停止个人工作空间.bat`。整合主提交 `e118b3022b515b46e918e25f647fa13386924840`（知识库基线 `c9cdc7adc2ed75c2c2b872d91b85d020567c1d0a`，新仓库基线 `c75fcb9`）；最终 HEAD 以 `git log -1` 为准。
 
 - 底座：知识收藏馆 V1.9（Git `c9cdc7adc2ed75c2c2b872d91b85d020567c1d0a`，schema 11）整体导入后成立新仓库；任务台以模块方式并入，React 18 组件保留原交互。
 - 数据：知识 `data/library.sqlite`（21 条内容/2 附件/2 导图/26 版本/1 专题）与任务 `data/tasks.db`（25 条/3 根/最大层级 4/已完成 1），来源与指纹见 `data/migration-report.json` 和 `docs/INTEGRATION_V1_0.md`。原两个项目未修改，可独立回滚使用。

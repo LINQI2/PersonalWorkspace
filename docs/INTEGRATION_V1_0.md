@@ -154,7 +154,19 @@ README.txt                说明
 - 备份/恢复：真实数据副本上导出→新增任务→恢复→回到 25 条；损坏 ZIP 400 且数据不变；旧知识库 ZIP 恢复到 17 条内容时任务仍为 25；旧任务 JSON 导入后知识领域仍存在。
 - 启动链：launcher 构建/后台启动/重复启动复用/正常停止；停止后端口释放、锁删除。
 
-## 12. 已知限制与后续候选
+## 12. Git 基线
+
+| 记录点 | SHA |
+| --- | --- |
+| 知识收藏馆 V1.9 基线（原仓库 HEAD） | `c9cdc7adc2ed75c2c2b872d91b85d020567c1d0a` |
+| 新仓库基线提交（导入 V1.9 源码） | `c75fcb9`（完整 SHA 见 `git log --oneline`） |
+| 整合主提交（代码、迁移、测试、文档、截图） | `e118b3022b515b46e918e25f647fa13386924840` |
+
+原始任务台无 Git 仓库：迁移前已建立完整快照（代码 + 通过运行中 API 导出的 JSON），位于 `D:\Projects\PersonalWorkspace-backups\taskhub-snapshot-*.zip`，不进入 Git。
+
+最终交付的完整 HEAD 以 `git log -1` 为准（其上可能追加仅文档的 SHA 补记提交）。界面截图见 `docs/screenshots/`：`tasks-1920.png`、`library-1920.png`、`tasks-1366.png`、`tasks-390.png`、`tasks-390-detail.png`。
+
+## 13. 已知限制与后续候选
 
 - 任务台固定浅色，知识库支持深浅主题；统一主题留待后续。
 - 恢复旧任务台 JSON 是全量替换，无逐条合并/差异预览。
