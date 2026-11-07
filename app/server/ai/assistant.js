@@ -1,4 +1,5 @@
 import { unifiedVersion } from '../unified.js';
+import { isProfessional } from '../space.js';
 import { resolve, inspect } from '../assistant/catalog.js';
 import { AiError } from './provider.js';
 const obj = (properties) => ({
@@ -22,6 +23,7 @@ export const structureEmpty = () => ({
 export function prepareAssistant(db, input) {
   if (!['assistant_qa', 'assistant_structure'].includes(input?.mode)) throw new AiError('input');
   const structure = input.mode === 'assistant_structure';
+  if(structure&&Array.isArray(input.keys)&&input.keys.some(k=>typeof k==='string'&&k.startsWith('entries:')&&isProfessional(db,k.slice(8))))throw new AiError('input');
   if (
     !Array.isArray(input.keys) ||
     input.keys.length > (structure ? 30 : 10) ||
@@ -31,6 +33,7 @@ export function prepareAssistant(db, input) {
   if (structure && unifiedVersion(db) && input.keys.some((k) => k.startsWith('directories:')))
     throw new AiError('input');
   const sources = input.keys.map((k) => resolve(db, k));
+  if(input.space!==undefined&&(!['personal','professional','all'].includes(input.space)||sources.some(s=>s.kind==='entries'&&input.space!=='all'&&s.space!==input.space)))throw new AiError('input');
   if (
     !structure &&
     (typeof input.question !== 'string' || !input.question.trim() || input.question.length > 1000)

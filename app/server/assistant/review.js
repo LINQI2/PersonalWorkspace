@@ -187,6 +187,7 @@ function merge(db, dir, a, b) {
   if (unifiedVersion(db)) validateUnified(db);
 }
 export function applyOperation(db, dir, s) {
+  if([s.object,s.target].some(k=>typeof k==='string'&&k.startsWith('entries:')&&isProfessional(db,k.slice(8))))throw Error('专业知识结构请在专业模块审核，未改写个人领域或归属。');
   if (s.action === 'keep') return;
   if (s.action === 'create') {
     if (!['domains', 'tags', 'collections', 'directories'].includes(s.kind))
@@ -527,3 +528,4 @@ export function validateAssistantBackup(db) {
     if (!Array.isArray(JSON.parse(r.changes_json))) throw Error('结构历史差异无效。');
   }
 }
+import { isProfessional } from '../space.js';

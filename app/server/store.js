@@ -111,6 +111,7 @@ export function hydrate(db, row) {
       : null;
   return {
     ...row,
+    space:db.prepare('PRAGMA user_version').get().user_version>=12&&db.prepare('SELECT 1 FROM professional_entries WHERE entry_id=?').get(row.id)?'professional':'personal',
     ...(db.prepare('PRAGMA user_version').get().user_version >= 11 &&
     db.prepare('SELECT entry_id FROM mindmaps WHERE entry_id=?').get(row.id)
       ? { mindmap: true }

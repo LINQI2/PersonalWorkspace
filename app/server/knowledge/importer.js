@@ -12,6 +12,7 @@ const normalize = (s) =>
 export function prepareImport(db, raw, format, convertLegacy = false) {
   const prepared = parseExchange(raw, format),
     originalPackage = prepared.value;
+  if(originalPackage.format==='professional-knowledge-v1')throw Error('请使用专业知识导入入口，未写入个人知识。');
   if (convertLegacy && originalPackage.version === 1) {
     const isChapter = (i) => {
       let p = i.parent;

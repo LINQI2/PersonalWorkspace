@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { expandedCards } from './professional-expanded.js';
 import { writeRelation } from './relations.js';
 import { saveProfessional, professionalDomains } from './professional.js';
 import { transaction } from './knowledge/store.js';
@@ -172,13 +173,15 @@ const directorySpec = () => {
   });
   return rows;
 };
-export function seedPreview(db) {
+export function seedPreview(db, batch='samples') {
+  if(!['samples','full'].includes(batch))throw Error('初始化批次无效。');
+  const cards=batch==='full'?[...sampleCards,...expandedCards]:sampleCards;
   return {
     version: 1,
     domains: directorySpec().filter(
       (d) => !db.prepare('SELECT 1 FROM professional_domains WHERE seed_key=?').get(d.key),
     ),
-    cards: sampleCards
+    cards: cards
       .filter((c) => !db.prepare('SELECT 1 FROM professional_entries WHERE seed_key=?').get(c[0]))
       .map((c) => ({ key: c[0], title: c[1], source: c[8] })),
     notice: '只新增缺失的种子，不覆盖已有记录或人工修改。首批12张通过后方可扩展。',
@@ -186,6 +189,10 @@ export function seedPreview(db) {
 }
 export function seedSamples(db, input) {
   if (input.confirm !== '创建已审核专业样例') throw Error('请审核差异后确认。');
+  const batch=input.batch||'samples';
+  if(!['samples','full'].includes(batch))throw Error('初始化批次无效。');
+  if(batch==='full'&&sampleCards.some(c=>!db.prepare('SELECT 1 FROM professional_entries WHERE seed_key=?').get(c[0])))throw Error('请先初始化并验证首批12张样例。');
+  const cards=batch==='full'?[...sampleCards,...expandedCards]:sampleCards;
   transaction(db, () => {
     for (const [position, d] of directorySpec().entries()) {
       if (db.prepare('SELECT 1 FROM professional_domains WHERE seed_key=?').get(d.key)) continue;
@@ -203,7 +210,7 @@ export function seedSamples(db, input) {
       );
     }
     const created=new Set();
-    for (const c of sampleCards) {
+    for (const c of cards) {
       if (db.prepare('SELECT 1 FROM professional_entries WHERE seed_key=?').get(c[0])) continue;
       const domainKey=directorySpec().find(d=>d.name===c[4]).key;
       const domain = professionalDomains(db).find((d) => d.seed_key === domainKey);
@@ -214,6 +221,7 @@ export function seedSamples(db, input) {
           description: c[5],
           content: '<h2>作用与原理</h2><p>' + c[6] + '</p>',
           concept_kind: c[3],
+          status:'review',
           aliases: [c[2]],
           scope_note: c[7],
           professional_domains: [domain.id],
@@ -223,7 +231,7 @@ export function seedSamples(db, input) {
             title: c[9],
             url: c[8],
             excerpt: c[5] + ' ' + c[6],
-            date_note: '2026-11-07 来源核对；原创概述，非逐字引文。',
+            date_note: (c[10]==='pending'||['cohesion','component','observer'].includes(c[0])?'待核验：原文未完整取得，不能视作核验通过。':'2026-11-07 来源页面已核对，正文为原创归纳，人工待审核。')+' '+c[9],
           },
         },
         undefined,
@@ -232,12 +240,13 @@ export function seedSamples(db, input) {
       db.prepare('UPDATE professional_entries SET seed_key=? WHERE entry_id=?').run(c[0], e.id);
       created.add(c[0]);
     }
-    for(const [from,to] of [['controller','collider'],['controller','body'],['controller','ray'],['rapier','controller'],['cohesion','component'],['cohesion','observer'],['component','ecs'],['modifier','effect'],['effect','gas']]){
-      if(!created.has(from)||!created.has(to))continue;
+    for(const [from,to] of [['controller','collider'],['controller','body'],['controller','ray'],['rapier','controller'],['cohesion','component'],['cohesion','observer'],['component','ecs'],['modifier','effect'],['effect','gas'],['mda','core-loop'],['core-loop','feedback'],['feedback','growth'],['srp','cohesion'],['composition','component'],['data-driven','scriptable-object'],['fsm','controller'],['collision','collider'],['game-loop','body'],['render-pipeline','shader'],['particles','render-pipeline'],['visual-composition','contrast'],['contrast','hierarchy'],['asset-pipeline','prefab'],['skeletal','asset-pipeline'],['hud','hierarchy'],['input-actions','controller'],['serialization','save-migration'],['save-migration','stable-id'],['prefab','scriptable-object'],['mcp','stable-id'],['testing','save-migration'],['profiler','particles']]){
+      if(!created.has(from)&&!created.has(to))continue;
+      if(!db.prepare('SELECT 1 FROM professional_entries WHERE seed_key=?').get(from)||!db.prepare('SELECT 1 FROM professional_entries WHERE seed_key=?').get(to))continue;
       const a=db.prepare('SELECT entry_id FROM professional_entries WHERE seed_key=?').get(from).entry_id;
       const b=db.prepare('SELECT entry_id FROM professional_entries WHERE seed_key=?').get(to).entry_id;
       writeRelation(db,{from_id:a,to_id:b,type:'related',note:'样例知识链关联候选，请结合来源人工审核。',evidence:[],uncertainty:'相关概念不等同，候选尚未人工确认。'},{origin:'import',state:'candidate'});
     }
   });
-  return seedPreview(db);
+  return seedPreview(db,batch);
 }

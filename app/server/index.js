@@ -1,4 +1,5 @@
 import { spaceSql } from './space.js';
+import { createProfessionalImport } from './professional-import.js';
 import { seedPreview, seedSamples } from './professional-seed.js';
 import { professionalDomains, saveProfessionalDomain, searchProfessional, readProfessional, saveProfessional } from './professional.js';
 import { getMap, saveMap, importMap } from './mindmaps.js';
@@ -170,7 +171,15 @@ export function createApp(dataDir = path.join(root, 'data'), options = {}) {
     req.is('application/json')
       ? next()
       : res.status(403).json({ error: '请从当前本地网站确认操作。' });
-  app.get('/api/professional/seed/preview', (_req,res)=>res.json(seedPreview(db)));
+  app.get('/api/professional/seed/preview', (req,res)=>res.json(seedPreview(db,req.query.batch||'samples')));
+  const professionalImports=createProfessionalImport(()=>db);
+  app.post('/api/professional/import/preview',credentialGuard,(req,res)=>res.json(professionalImports.preview(req.body.raw)));
+  app.post('/api/professional/import/commit',credentialGuard,(req,res)=>res.json(professionalImports.commit(req.body)));
+  app.post('/api/professional/import/cancel',credentialGuard,(req,res)=>res.json(professionalImports.cancel(req.body.token)));
+  app.get('/api/professional/versions/:id',(req,res)=>{
+    readProfessional(db,req.params.id);
+    res.json(db.prepare('SELECT * FROM knowledge_versions WHERE entry_id=? ORDER BY revision DESC LIMIT 50').all(req.params.id));
+  });
   app.post('/api/professional/seed',credentialGuard,(req,res)=>res.json(seedSamples(db,req.body)));
   app.get('/api/professional/domains', (_req,res)=>res.json(professionalDomains(db)));
   app.get('/api/professional/search', (req,res)=>res.json(searchProfessional(db,req.query)));

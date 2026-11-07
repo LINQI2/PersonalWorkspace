@@ -164,4 +164,4 @@
 - Windows 启动脚本、自动化与真实浏览器验收脚本、维护文档。
 # 开发中：专业知识 V0.1 / 2026-11-07
 
-新增独立专业空间、schema12扩展表、专业页面和管理表单、35目录/12样例幂等预览、内部AI范围检索和只读CLI/API。复用原内容、来源、关系、软删除、版本和ZIP。当前为开发检查点，40张内容与完整验收尚未完成，详见professional-knowledge/IMPLEMENTATION_STATUS.md。
+新增独立专业空间、schema12扩展表、专业JSON预览导入、版本历史审核、回收恢复、多领域编辑、35目录/40卡幂等初始化、内部AI范围检索和只读CLI/API。补齐旧入口空间写入防护、40卡与任务的真实双库恢复、三尺寸UI和实际外部Agent验收；102项测试通过。5张来源仍待核验，正式数据未启用，不宣布整体全部通过，详见professional-knowledge/IMPLEMENTATION_STATUS.md。

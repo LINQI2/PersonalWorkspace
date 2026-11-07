@@ -114,6 +114,7 @@ function App() {
   const [view, setView] = useState('all');
   // 任务台独立于知识视图开关：切到任务台时保留知识列表筛选、选中与滚动位置
   const [professionalOpen, setProfessionalOpen] = useState(false);
+  const [professionalTarget,setProfessionalTarget]=useState<{id:string,nonce:number}|null>(null);
   const [tasksOpen, setTasksOpen] = useState(false);
   const tasksOpenRef = useRef(false);
   const knowledgeScroll = useRef(0);
@@ -384,6 +385,7 @@ function App() {
     return true;
   };
   const edit = (entry: Entry) => {
+    if(entry.space==='professional'){void openContent(entry.id);return;}
     if (entry.mindmap) {
       void openContent(entry.id);
       return;
@@ -415,6 +417,7 @@ function App() {
         const requestedHash = location.hash;
         const e = await api<Entry>('/entries/' + id);
         if (location.hash !== requestedHash) return;
+        if(e.space==='professional'){if(await nav('professional'))setProfessionalTarget({id,nonce:Date.now()});return;}
         if (e.knowledge_kind) {
           if (await nav('library')) {
             setDetail(null);
@@ -564,6 +567,7 @@ function App() {
     const requestedHash = location.hash;
     const e = await api<Entry>('/entries/' + id);
     if (location.hash !== requestedHash) return;
+    if(e.space==='professional'){if(await nav('professional'))setProfessionalTarget({id,nonce:Date.now()});return;}
     remember(id);
     window.dispatchEvent(new Event('pk-close-readers'));
     setDetail(null);
@@ -581,6 +585,7 @@ function App() {
   }, [view]);
   const browseContent = async (id: string) => {
     const e = await api<Entry>('/entries/' + id);
+    if(e.space==='professional'){await openContent(id);return;}
     if (e.mindmap) {
       void openContent(id);
       return;
@@ -1404,7 +1409,7 @@ function App() {
               </>
             )}
           </div>
-          <div style={professionalOpen?undefined:{display:'none'}}><Professional active={professionalOpen} onOpen={id=>{setProfessionalOpen(false);void browseContent(id);}} /></div>
+          <div style={professionalOpen?undefined:{display:'none'}}><Professional active={professionalOpen} target={professionalTarget} onOpen={id=>{void browseContent(id);}} /></div>
           <div className={'tasks-host' + (tasksOpen ? ' is-active' : '')} aria-hidden={!tasksOpen}>
             <TasksModule active={tasksOpen} />
           </div>

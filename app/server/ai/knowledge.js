@@ -43,6 +43,7 @@ export const integrationEmpty = () => ({
   verification: [],
 });
 export function prepareKnowledgeInput(db, input) {
+  if(Array.isArray(input.ids)&&input.ids.some(id=>isProfessional(db,id)))throw new AiError('input');
   if (
     !Array.isArray(input.ids) ||
     input.ids.length < 2 ||
@@ -131,3 +132,4 @@ export function normalizeIntegration(value, p) {
   }
   return value;
 }
+import { isProfessional } from '../space.js';

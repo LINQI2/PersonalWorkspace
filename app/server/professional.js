@@ -81,10 +81,11 @@ export function validateProfessional(db) {
 export function readProfessional(db, id) {
   const meta = db.prepare('SELECT * FROM professional_entries WHERE entry_id=?').get(id);
   if (!meta) throw Error('专业知识不存在。');
+  const record=getRecord(db,id);
   return {
-    ...getRecord(db, id),
+    ...record,
     ...meta,
-    relations: related(db,id),
+    relations: record.lifecycle?.state==='trash'?[]:related(db,id),
     aliases: JSON.parse(meta.aliases_json),
     space: 'professional',
     professional_domains: db
@@ -153,6 +154,7 @@ export function saveProfessional(db, input, id, { outer = false } = {}) {
   return outer ? run() : transaction(db, run);
 }
 export function searchProfessional(db, q = {}) {
+  if(q.view && !['active','trash'].includes(q.view))throw Error('专业视图无效。');
   const query = text(q.q || '', 200).toLocaleLowerCase();
   const domains = q.domain ? [q.domain] : [];
   const tree = professionalDomains(db);
@@ -162,7 +164,7 @@ export function searchProfessional(db, q = {}) {
     .prepare(
       `SELECT e.id,e.title,e.description,e.plain_text,p.concept_kind,p.aliases_json,p.scope_note
     FROM entries e JOIN professional_entries p ON p.entry_id=e.id
-    WHERE NOT EXISTS(SELECT 1 FROM content_lifecycle l WHERE l.entry_id=e.id AND l.state='trash') ORDER BY e.title,e.id`,
+    WHERE ${q.view==='trash'?'EXISTS':'NOT EXISTS'}(SELECT 1 FROM content_lifecycle l WHERE l.entry_id=e.id AND l.state='trash') ORDER BY e.title,e.id`,
     )
     .all()
     .filter(

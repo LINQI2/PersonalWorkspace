@@ -1,4 +1,4 @@
-import { spaceSql } from '../space.js';
+import { spaceSql, isProfessional } from '../space.js';
 import { randomUUID } from 'node:crypto';
 import { saveEntry, hydrate, kinds, cleanContent, validUrl } from '../store.js';
 import { checkedDate, checkedTimestamp, bounded, parseExchange } from './exchange.js';
@@ -446,7 +446,8 @@ export function validateKnowledgeBackup(db) {
       'SELECT r.*,b.raw_input,b.format FROM knowledge_import_entries r JOIN knowledge_imports b ON b.id=r.batch_id',
     )
     .all())
-    if (!parseExchange(link.raw_input, link.format).value.items.some((i) => i.id === link.local_id))
+    if (!parseExchange(link.raw_input, link.format).value.items.some((i) => i.id === link.local_id)||
+      (parseExchange(link.raw_input,link.format).value.format==='professional-knowledge-v1'&&!isProfessional(db,link.entry_id)))
       throw Error('导入知识追溯 ID 无效。');
   for (const d of db.prepare('SELECT * FROM knowledge_drafts').all()) {
     const p = JSON.parse(d.payload);

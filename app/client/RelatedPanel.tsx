@@ -48,6 +48,7 @@ export function RelatedPanel({
   selectionQuote?: string;
 }) {
   const [rows, setRows] = useState<any[]>([]),
+    [crossSpace,setCrossSpace]=useState(false),
     [tick, setTick] = useState(0),
     [error, setError] = useState(''),
     [edit, setEdit] = useState<any>(null),
@@ -86,7 +87,7 @@ export function RelatedPanel({
       () =>
         api(
           '/relation-candidates?' +
-            new URLSearchParams({ center: id, q, domain, collection: topic }),
+            new URLSearchParams({ center: id, q, domain, collection: topic,...(crossSpace?{space:'all'}:{}) }),
         )
           .then((r) => {
             if (live) {
@@ -104,7 +105,7 @@ export function RelatedPanel({
       live = false;
       clearTimeout(t);
     };
-  }, [id, q, domain, topic, !!edit]);
+  }, [id, q, domain, topic, !!edit,crossSpace]);
   useEffect(() => {
     reviewToken.current = token;
   }, [token]);
@@ -255,6 +256,7 @@ export function RelatedPanel({
               选择真实内容或章节；组成声明不会自动调整文档父级。补充/修正的方向为“B补充或修正A”。
             </p>
             <div className="library-filterbar">
+              <label><input type="checkbox" checked={crossSpace} onChange={e=>setCrossSpace(e.target.checked)}/>包含另一知识空间（明确跨空间引用）</label>
               <input
                 aria-label="搜索关联目标"
                 value={q}

@@ -39,6 +39,7 @@ export function attach(db, input) {
   )
     throw Error('请选择 1～100 条不同知识点。');
   for (const i of input.items) {
+    if(isProfessional(db,i.id)||isProfessional(db,i.parent_id))throw Error('专业知识不能移入个人文档章节；请建立明确引用。');
     const r = db.prepare('SELECT * FROM knowledge_records WHERE entry_id=?').get(i.id);
     if (!r || r.kind !== 'point' || (i.revision !== undefined && r.revision !== i.revision))
       throw Error('知识点已变化或类型不支持，请重新载入。');
@@ -119,6 +120,7 @@ export function structuralSuggestions(db, pageId) {
   return [...found.values()]
     .filter(
       (i) =>
+        !isProfessional(db,i.id)&&
         db
           .prepare("SELECT entry_id FROM knowledge_records WHERE entry_id=? AND kind='point'")
           .get(i.id) &&
@@ -157,3 +159,4 @@ export function validateReadingBackup(db) {
       if (!assets.includes(img[1])) throw Error('历史图片缺失。');
   }
 }
+import { isProfessional } from '../space.js';

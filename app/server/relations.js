@@ -1,4 +1,5 @@
 import { visibleSql, lifecycle, lifecycleVersion } from './lifecycle.js';
+import { spaceSql,isProfessional } from './space.js';
 import { randomUUID, createHash } from 'node:crypto';
 import { readingText } from '../shared/reading-anchor.js';
 import { transaction } from './knowledge/store.js';
@@ -25,6 +26,7 @@ export function node(db, id) {
   if (lifecycle(db, id)?.state === 'trash') throw Error('内容在回收站，请先恢复后关联或探索。');
   return {
     ...r,
+    space:isProfessional(db,id)?'professional':'personal',
     type:
       db.prepare('PRAGMA user_version').get().user_version >= 11 &&
       db.prepare('SELECT entry_id FROM mindmaps WHERE entry_id=?').get(id)
@@ -148,7 +150,7 @@ export function candidates(db, input = {}) {
           ]),
         ]
       : null;
-  const where = ['e.id<>?'],
+  const where = ['e.id<>?',spaceSql(db,input.space||(isProfessional(db,input.center)?'professional':'personal'))],
     args = [input.center || ''];
   if (q) {
     where.push(

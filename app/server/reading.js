@@ -55,7 +55,7 @@ export function readingTargets(db, q = '') {
   if (typeof q !== 'string' || q.length > 200) throw Error('检索文字超限。');
   return db
     .prepare(
-      `SELECT e.* FROM entries e WHERE e.type='note' AND ${visibleSql(db)} AND e.title LIKE ? ORDER BY e.updated_at DESC LIMIT 25`,
+      `SELECT e.* FROM entries e WHERE e.type='note' AND ${spaceSql(db)} AND ${visibleSql(db)} AND e.title LIKE ? ORDER BY e.updated_at DESC LIMIT 25`,
     )
     .all('%' + q.replace(/[\\%_]/g, '') + '%')
     .map((e) => ({ id: e.id, title: e.title, version: entryStamp(e) }));
@@ -263,3 +263,4 @@ export function validateReadingMarks(db) {
       throw Error('批注或引用结构无效，已拒绝启动/恢复。');
   }
 }
+import { spaceSql } from './space.js';

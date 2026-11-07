@@ -1,4 +1,5 @@
 import { relationTypes } from '../relations.js';
+import { parseProfessional } from '../professional-import.js';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { cleanContent, validUrl } from '../store.js';
@@ -89,6 +90,10 @@ export function parseExchange(raw, format = 'json') {
       throw Error('JSON 无法解析，请核对完整对象，不要包含代码围栏。');
     }
     bounded(value);
+    if(value.format==='professional-knowledge-v1'){
+      const canonical=JSON.parse(raw);parseProfessional(raw);
+      return {raw,format:'json',value:{...value,items:value.entries},hash:createHash('sha256').update(JSON.stringify(canonical)).digest('hex')};
+    }
     if (value.version === 2) return parseV2(value, raw);
     validateExchangeSchema(value);
   } else {

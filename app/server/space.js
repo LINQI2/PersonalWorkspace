@@ -4,3 +4,4 @@ export function spaceSql(db, space = 'personal', alias = 'e') {
   const exists = `EXISTS(SELECT 1 FROM professional_entries pe WHERE pe.entry_id=${alias}.id)`;
   return space === 'all' ? '1' : space === 'professional' ? exists : `NOT ${exists}`;
 }
+export const isProfessional=(db,id)=>db.prepare('PRAGMA user_version').get().user_version>=12&&!!db.prepare('SELECT 1 FROM professional_entries WHERE entry_id=?').get(id);

@@ -58,6 +58,7 @@ export function Assistant({
   initialSpace?: string;
 }) {
   const [space, setSpace] = useState(initialSpace);
+  useEffect(()=>{setSpace(initialSpace);setKeys([]);setMatches([]);setResult(null);},[initialSpace]);
   const [tab, setTab] = useState(initialTab),
     [objects, setObjects] = useState<ObjectInfo[]>([]),
     [candidates, setCandidates] = useState<any[]>([]),
@@ -140,7 +141,7 @@ export function Assistant({
     let live = true;
     setEstimate(null);
     if ((tab === 'ask' || tab === 'structure') && keys.length && (tab !== 'ask' || question.trim()))
-      assistantWrite('estimate', { mode, keys, question })
+      assistantWrite('estimate', { mode, keys, question,space })
         .then((r) => {
           if (live) setEstimate(r);
         })
@@ -194,7 +195,7 @@ export function Assistant({
       const c = new AbortController();
       controller.current = c;
       try {
-        const r = await assistantWrite('generate', { mode, keys, question }, c.signal);
+        const r = await assistantWrite('generate', { mode, keys, question,space }, c.signal);
         setResult(r);
         setSelected([]);
         setDiff(null);

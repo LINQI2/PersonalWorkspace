@@ -10,6 +10,7 @@ export const toolLabels = {
 };
 export type ToolKind = keyof typeof toolLabels;
 export type Entry = {
+  space?: 'personal'|'professional';
   mindmap?: boolean;
   id: string;
   type: 'bookmark' | 'note';

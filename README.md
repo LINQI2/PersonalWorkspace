@@ -109,4 +109,4 @@ node scripts/migrate-legacy.mjs
 - 未做 Windows 整机重启/断电/磁盘满压力测试；正式数据迁移与备份恢复已在副本上实际演练。
 # 专业知识开发分支说明
 
-本分支包含专业知识V0.1的进行中实现（schema12），尚未完成全部内容与验收。正式数据未迁移。当前功能、测试证据和明确未完成项见[实施记录](docs/professional-knowledge/IMPLEMENTATION_STATUS.md)，外部只读访问见[读取手册](docs/professional-knowledge/READ_API.md)。不要将此开发状态视作V0.1正式交付。
+本分支包含专业知识V0.1功能与隔离回归（schema12）。专业导入、版本历史、回收恢复、40张非空卡和外部只读接口已实现；仍有5张来源待核验，正式数据未迁移或启用，不宣布整体全部通过。见[实施与验收状态](docs/professional-knowledge/IMPLEMENTATION_STATUS.md)及[读取与导入手册](docs/professional-knowledge/READ_API.md)。

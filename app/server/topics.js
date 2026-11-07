@@ -74,7 +74,7 @@ export function getCollection(db, id) {
           ...db
             .prepare(
               'SELECT r.entry_id FROM entry_collections r JOIN entries e ON e.id=r.entry_id WHERE r.taxonomy_id=? AND ' +
-                visibleSql(db),
+                visibleSql(db)+' AND '+spaceSql(db),
             )
             .all(id)
             .map((r) => r.entry_id),
@@ -231,6 +231,7 @@ export function saveManualCollectionDraft(db, id, input) {
 }
 export function collectionRelations(db, id, { ids, action }) {
   getCollection(db, id);
+  if(action==='add'&&Array.isArray(ids)&&ids.some(id=>isProfessional(db,id)))throw Error('专业知识不能混入个人专题；请使用内容间引用。');
   if (
     !['add', 'remove'].includes(action) ||
     !Array.isArray(ids) ||
@@ -314,3 +315,4 @@ export function validateTopicBackup(db, assets) {
     }
   }
 }
+import { spaceSql,isProfessional } from './space.js';

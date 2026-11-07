@@ -1,5 +1,15 @@
 # 专业知识只读访问
 
+专业JSON导入格式见下例。仅使用已存在的专业领域ID；512KiB、1～100条。先预览并选择，存在同名必须明确另存，不覆盖任何原记录。导入全部保存为review状态，原包和来源进入既有备份。
+
+```json
+{"format":"professional-knowledge-v1","entries":[{"id":"local-1","title":"术语名","description":"核心定义","content":"<p>实际正文</p>","concept_kind":"concept","aliases":["English Name"],"scope_note":"适用条件与边界","professional_domains":["已有专业领域UUID"],"primary_domain":"已有专业领域UUID","sources":[{"kind":"website","title":"直接支持定义的来源","url":"https://example.com/reference","excerpt":"真实依据或明确标注的原创归纳","date_note":"适用版本、核验状态与日期"}]}]}
+```
+
+POST `/api/professional/import/preview` 接收 `{raw}`，commit接收 `{token,ids,confirm:"确认导入专业知识",duplicate?:"另存新知识"}`。这些是网站管理API，需现有同源/session保护，不属于外部只读CLI。
+
+隔离验收可通过环境变量`PW_KNOWLEDGE_URL`选择显式IPv4回环端口。默认地址仍为127.0.0.1:5180。
+
 运行 PersonalWorkspace 后，可使用 `node scripts/professional-read.mjs`。固定连接本机5180，不打开SQLite，不传递项目上下文，不具有写入命令。
 
 | 命令 | 受控 HTTP GET | 返回 |
