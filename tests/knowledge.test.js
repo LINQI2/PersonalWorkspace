@@ -313,7 +313,7 @@ test('schema3 -> 4 preserves all old fields/assets/workspace/usage with real pre
           }),
         );
       db = fail ? new DatabaseSync(path.join(dir, 'library.sqlite')) : openStore(dir);
-      assertDatabaseSchema(db, fail ? 3 : 11);
+      assertDatabaseSchema(db, fail ? 3 : 12);
       assert.equal(JSON.stringify(db.prepare('SELECT * FROM entries').all()), before);
       assert.equal(
         readFileSync(path.join(dir, 'ai-usage.json'), 'utf8'),

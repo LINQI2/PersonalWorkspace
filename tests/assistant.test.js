@@ -616,7 +616,7 @@ test('schema5 ->6 exact old data/pre-upgrade ZIP; migration fault preserves5', a
           }),
         );
       db = fail ? new DatabaseSync(path.join(dir, 'library.sqlite')) : openStore(dir);
-      assertDatabaseSchema(db, fail ? 5 : 11);
+      assertDatabaseSchema(db, fail ? 5 : 12);
       assert.equal(JSON.stringify(db.prepare('SELECT * FROM entries ORDER BY id').all()), before);
       const file = readdirSync(path.join(dir, 'backups')).find((f) => f.startsWith('pre-schema-6'));
       const restored = validateBackup(readFileSync(path.join(dir, 'backups', file)));

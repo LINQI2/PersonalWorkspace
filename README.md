@@ -107,3 +107,6 @@ node scripts/migrate-legacy.mjs
 - 服务只绑定 `127.0.0.1`，无账号/权限/云同步；同 Windows 账号的恶意程序仍在既有威胁边界外。
 - 任务台样式已整体限定在 `.tw-app` 作用域，但知识库仍是浅/深色主题、任务台固定浅色；这是本轮“保留原界面、不重做 UI”的取舍。
 - 未做 Windows 整机重启/断电/磁盘满压力测试；正式数据迁移与备份恢复已在副本上实际演练。
+# 专业知识开发分支说明
+
+本分支包含专业知识V0.1的进行中实现（schema12），尚未完成全部内容与验收。正式数据未迁移。当前功能、测试证据和明确未完成项见[实施记录](docs/professional-knowledge/IMPLEMENTATION_STATUS.md)，外部只读访问见[读取手册](docs/professional-knowledge/READ_API.md)。不要将此开发状态视作V0.1正式交付。

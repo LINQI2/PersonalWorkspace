@@ -20,7 +20,7 @@ test('schema1 -> schema2 -> schema3 preserves old tables/relations, creates real
     writeFileSync(path.join(dir, 'workspace.json'), JSON.stringify(workspace));
     db.close();
     db = openStore(dir);
-    assert.equal(db.prepare('PRAGMA user_version').get().user_version, 11);
+    assert.equal(db.prepare('PRAGMA user_version').get().user_version, 12);
     assert.equal(
       JSON.stringify(
         db
@@ -55,7 +55,7 @@ test('schema1 -> schema2 -> schema3 preserves old tables/relations, creates real
     }
     db.close();
     db = openStore(dir);
-    assert.equal(readdirSync(path.join(dir, 'backups')).length, 10);
+    assert.equal(readdirSync(path.join(dir, 'backups')).length, 11);
     assert.equal(readFileSync(path.join(dir, 'workspace.json'), 'utf8'), JSON.stringify(workspace));
   } finally {
     db.close();
@@ -123,7 +123,7 @@ test('genuine schema1 ZIP restores through isolated migration into current schem
       body: fd,
     });
     assert.equal(res.status, 200);
-    assert.equal((await (await fetch(base + '/api/meta')).json()).schemaVersion, 11);
+    assert.equal((await (await fetch(base + '/api/meta')).json()).schemaVersion, 12);
     assert.equal((await (await fetch(base + '/api/collections/topic')).json()).count, 4);
     assert.equal((await (await fetch(base + '/api/entries')).json()).total, 4);
   } finally {

@@ -1,3 +1,4 @@
+import { professionalTables, validateProfessional } from './professional.js';
 import { validateMindmaps } from './mindmaps.js';
 import { validateReadingMarks } from './reading.js';
 import { validateLifecycle } from './lifecycle.js';
@@ -100,7 +101,7 @@ export function validateBackup(buffer, { upgrade = true } = {}) {
     const manifest = JSON.parse(manifestEntry.getData().toString());
     if (
       manifest.format !== 'personal-knowledge' ||
-      ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, VERSION].includes(manifest.version) ||
+      ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, VERSION].includes(manifest.version) ||
       !Array.isArray(manifest.files) ||
       manifest.files.length !== entries.length - 1
     )
@@ -144,6 +145,7 @@ export function validateBackup(buffer, { upgrade = true } = {}) {
       ...(manifest.version >= 9 ? ['content_lifecycle', 'content_versions'] : []),
       ...(manifest.version >= 10 ? ['reading_marks'] : []),
       ...(manifest.version >= 11 ? ['mindmaps', 'mindmap_versions'] : []),
+      ...(manifest.version >= 12 ? professionalTables : []),
     ].sort();
     if (
       objects
@@ -236,6 +238,7 @@ export function validateBackup(buffer, { upgrade = true } = {}) {
     if (manifest.version >= 9) validateLifecycle(db);
     if (manifest.version >= 10) validateReadingMarks(db);
     if (manifest.version >= 11) validateMindmaps(db);
+    if (manifest.version >= 12) validateProfessional(db);
     db.close();
     db = null;
     // Validate the original package first; upgrade only this isolated extracted copy.

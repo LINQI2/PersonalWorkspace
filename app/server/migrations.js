@@ -1,3 +1,4 @@
+import { professionalSchema } from './professional.js';
 import { DatabaseSync } from 'node:sqlite';
 import {
   mkdtempSync,
@@ -45,7 +46,7 @@ const objects = (db) =>
     .prepare("SELECT type,name,sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY name")
     .all();
 export function assertDatabaseSchema(db, version) {
-  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].includes(version))
+  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].includes(version))
     throw Error('数据库来自不兼容版本，请使用对应软件打开。');
   if (!definitions.has(version)) {
     const expected = new DatabaseSync(':memory:');
@@ -61,6 +62,7 @@ export function assertDatabaseSchema(db, version) {
       if (version >= 9) expected.exec(lifecycleSchema);
       if (version >= 10) expected.exec(readingMarksSchema);
       if (version >= 11) expected.exec(mindmapSchema);
+      if (version >= 12) expected.exec(professionalSchema);
       definitions.set(version, JSON.stringify(objects(expected)));
     } finally {
       expected.close();
@@ -301,7 +303,22 @@ export function initializeStore(db, dir, { beforeMigrationCommit, validateMigrat
       throw e;
     }
   }
-  assertDatabaseSchema(db, 11);
+  if (version < 12) {
+    assertDatabaseSchema(db, 11);
+    if (version > 0) {
+      const bytes = migrationBackup(db, dir, 12);
+      validateMigrationBackup?.(bytes);
+    }
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      db.exec(professionalSchema);
+      db.exec('PRAGMA user_version=12');
+      beforeMigrationCommit?.(db);
+      assertDatabaseSchema(db, 12);
+      db.exec('COMMIT');
+    } catch (e) { db.exec('ROLLBACK'); throw e; }
+  }
+  assertDatabaseSchema(db, 12);
 }
 
 export const lifecycleSchema = `

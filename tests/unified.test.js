@@ -430,7 +430,7 @@ test('schema6 ->7 verified pre-upgrade ZIP preserves all old tables and faulty m
           }),
         );
       db = fault ? new DatabaseSync(path.join(dir, 'library.sqlite')) : openStore(dir);
-      assertDatabaseSchema(db, fault ? 6 : 11);
+      assertDatabaseSchema(db, fault ? 6 : 12);
       const originalTables = JSON.parse(before).map(([name]) => name);
       assert.equal(
         JSON.stringify(totals(db).filter(([name]) => originalTables.includes(name))),
@@ -440,7 +440,7 @@ test('schema6 ->7 verified pre-upgrade ZIP preserves all old tables and faulty m
       const valid = validateBackup(readFileSync(path.join(dir, 'backups', zip)));
       try {
         const d = openStore(valid.tmp);
-        assertDatabaseSchema(d, 11);
+        assertDatabaseSchema(d, 12);
         assert.equal(d.prepare('SELECT title FROM entries').get().title, '旧库笔记');
         d.close();
       } finally {

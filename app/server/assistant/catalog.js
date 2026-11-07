@@ -1,3 +1,4 @@
+import { spaceSql } from '../space.js';
 import { lifecycle, visibleSql } from '../lifecycle.js';
 import { unifiedVersion, provenance, domainTree } from '../unified.js';
 import { createHash } from 'node:crypto';
@@ -34,7 +35,7 @@ export function resolve(db, key) {
     const sourceRows = k
       ? db
           .prepare(
-            'SELECT s.id,s.kind,s.original_date,s.date_note,s.excerpt,r.quote FROM knowledge_sources s JOIN knowledge_entry_sources r ON r.source_id=s.id WHERE r.entry_id=? ORDER BY s.id',
+            'SELECT s.id,s.kind,s.title,s.url,s.original_date,s.date_note,s.excerpt,r.quote FROM knowledge_sources s JOIN knowledge_entry_sources r ON r.source_id=s.id WHERE r.entry_id=? ORDER BY s.id',
           )
           .all(id)
       : imported?.sources || [];
@@ -50,11 +51,14 @@ export function resolve(db, key) {
       sourceDates: sourceRows.map((s) => ({
         id: s.id,
         kind: s.kind,
+        title:s.title,
+        url:s.url,
         date: s.original_date,
         note: s.date_note,
       })),
       pageId,
       entryKind: k?.kind || r.resource_kind,
+      space: db.prepare('PRAGMA user_version').get().user_version >= 12 && db.prepare('SELECT 1 FROM professional_entries WHERE entry_id=?').get(id) ? 'professional' : 'personal',
       hasEvidence: text.replace(/https?:\/\/\S+/g, '').replace(/\s/g, '').length >= 24,
       count: 1,
       parent: s?.parent_id || null,
@@ -165,7 +169,7 @@ export function catalog(db) {
     const table = kind === 'directories' ? 'knowledge_directories' : kind;
     for (const r of db
       .prepare(
-        `SELECT id FROM ${table} e ${kind === 'entries' ? 'WHERE ' + visibleSql(db) : ''} ORDER BY id`,
+        `SELECT id FROM ${table} e ${kind === 'entries' ? 'WHERE ' + visibleSql(db) + ' AND ' + spaceSql(db) : ''} ORDER BY id`,
       )
       .all())
       out.push(resolve(db, kind + ':' + r.id));
@@ -245,7 +249,7 @@ export function inspect(db) {
     totalCandidates: candidates.length,
   };
 }
-export function retrieve(db, question) {
+export function retrieve(db, question, space = 'personal') {
   if (typeof question !== 'string' || !question.trim() || question.length > 1000)
     throw Error('请输入 1～1000 字问题。');
   const stop = new Set([
@@ -280,13 +284,13 @@ export function retrieve(db, question) {
     const table = kind === 'directories' ? 'knowledge_directories' : kind;
     const expr =
       kind === 'entries'
-        ? "title||' '||description||' '||plain_text"
+        ? "title||' '||description||' '||plain_text" + (db.prepare('PRAGMA user_version').get().user_version >= 12 ? "||' '||COALESCE((SELECT aliases_json FROM professional_entries WHERE entry_id=e.id),'')" : '')
         : kind === 'collections'
-          ? "name||' '||COALESCE((SELECT introduction||' '||content FROM collection_documents WHERE collection_id=collections.id),'')"
+          ? "name||' '||COALESCE((SELECT introduction||' '||content FROM collection_documents WHERE collection_id=e.id),'')"
           : 'name';
     const clause = terms.map(() => `(${expr}) LIKE ? ESCAPE '\\'`).join(' OR ');
     for (const r of db
-      .prepare(`SELECT id FROM ${table} WHERE ${clause} LIMIT 80`)
+      .prepare(`SELECT id FROM ${table} e WHERE (${clause}) AND ${kind === 'entries' ? spaceSql(db,space)+' AND '+visibleSql(db) : space === 'professional' ? '0' : '1'} LIMIT 80`)
       .all(...terms.map((t) => '%' + t.replace(/[\\%_]/g, '\\$&') + '%')))
       rows.push(resolve(db, kind + ':' + r.id));
   }

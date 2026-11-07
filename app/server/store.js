@@ -1,3 +1,4 @@
+import { validateProfessional } from './professional.js';
 import { validateMindmaps } from './mindmaps.js';
 import { validateReadingMarks } from './reading.js';
 import { lifecycle, lifecycleVersion, validateLifecycle } from './lifecycle.js';
@@ -16,7 +17,7 @@ import { validateAssistantBackup } from './assistant/review.js';
 import { validateKnowledgeBackup } from './knowledge/store.js';
 import { validateTopicBackup } from './topics.js';
 
-export const VERSION = 11;
+export const VERSION = 12;
 export const toolKinds = ['website', 'online', 'ai', 'desktop', 'custom', 'other'];
 export const kinds = ['domains', 'tags', 'collections'];
 export function openStore(directory, options = {}) {
@@ -32,6 +33,7 @@ export function openStore(directory, options = {}) {
     validateLifecycle(db);
     validateReadingMarks(db);
     validateMindmaps(db);
+    validateProfessional(db);
     validateKnowledgeBackup(db);
     validateTopicBackup(db, db.prepare('SELECT * FROM assets').all());
     db.exec('PRAGMA journal_mode=WAL;');
@@ -138,7 +140,9 @@ export function hydrate(db, row) {
       : null,
   };
 }
-export function saveEntry(db, input, id, { transaction = true, mapWrite = false } = {}) {
+export function saveEntry(db, input, id, { transaction = true, mapWrite = false, professionalWrite = false } = {}) {
+  if (id && !professionalWrite && db.prepare('PRAGMA user_version').get().user_version >= 12 && db.prepare('SELECT 1 FROM professional_entries WHERE entry_id=?').get(id))
+    throw Error('请使用专业知识编辑器保存，未修改专业记录。');
   if (
     id &&
     !mapWrite &&

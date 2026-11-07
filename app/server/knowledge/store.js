@@ -1,3 +1,4 @@
+import { spaceSql } from '../space.js';
 import { randomUUID } from 'node:crypto';
 import { saveEntry, hydrate, kinds, cleanContent, validUrl } from '../store.js';
 import { checkedDate, checkedTimestamp, bounded, parseExchange } from './exchange.js';
@@ -172,7 +173,7 @@ export function addSource(db, source, batchId = null) {
   );
   return id;
 }
-export function saveRecord(db, input, id, { outer = false } = {}) {
+export function saveRecord(db, input, id, { outer = false, professionalWrite = false } = {}) {
   const run = () => {
     validateRecord(input);
     const current = id ? getRecord(db, id) : null;
@@ -192,7 +193,7 @@ export function saveRecord(db, input, id, { outer = false } = {}) {
       db,
       { ...input, type: 'note', resource_kind: 'knowledge', tool_kind: '', url: '' },
       id,
-      { transaction: false },
+      { transaction: false, professionalWrite },
     );
     const position =
       current?.position ??
@@ -249,7 +250,7 @@ export function saveRecord(db, input, id, { outer = false } = {}) {
   return outer ? run() : transaction(db, run);
 }
 export function listRecords(db, q = {}) {
-  const conditions = [],
+  const conditions = [spaceSql(db)],
     values = [];
   if (q.directory) {
     conditions.push('k.directory_id=?');
@@ -381,7 +382,7 @@ export function moveDirectory(db, id, direction) {
   });
 }
 export function saveKnowledgeDraft(db, key, payload) {
-  if (!/^(new|[a-f0-9-]{36})$/.test(key)) throw Error('知识草稿标识无效。');
+  if (!/^(professional:)?(new|[a-f0-9-]{36})$/.test(key)) throw Error('知识草稿标识无效。');
   bounded(payload);
   if (
     typeof payload?.content !== 'string' ||
@@ -451,7 +452,7 @@ export function validateKnowledgeBackup(db) {
     const p = JSON.parse(d.payload);
     bounded(p);
     if (
-      !/^(new|[a-f0-9-]{36})$/.test(d.key) ||
+      !/^(professional:)?(new|[a-f0-9-]{36})$/.test(d.key) ||
       typeof p.content !== 'string' ||
       cleanContent(p.content) !== p.content ||
       Buffer.byteLength(d.payload) > 1_500_000

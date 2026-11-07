@@ -393,8 +393,8 @@ test('schema9 ->10 preserves all33 original tables and workspace; verified pre-u
         b.dispose();
       },
     });
-    assert.deepEqual(migrationSources, [9, 10]);
-    assert.equal(db.prepare('PRAGMA user_version').get().user_version, 11);
+    assert.deepEqual(migrationSources, [9, 10, 11]);
+    assert.equal(db.prepare('PRAGMA user_version').get().user_version, 12);
     assert.equal(db.prepare('SELECT count(*) n FROM entries').get().n, 1);
     const bpath = readdirSync(path.join(dir, 'backups')).find((n) =>
       n.startsWith('pre-schema-10-'),
@@ -403,7 +403,7 @@ test('schema9 ->10 preserves all33 original tables and workspace; verified pre-u
     const b = validateBackup(readFileSync(path.join(dir, 'backups', bpath)));
     try {
       const copy = openStore(b.tmp);
-      assert.equal(copy.prepare('PRAGMA user_version').get().user_version, 11);
+      assert.equal(copy.prepare('PRAGMA user_version').get().user_version, 12);
       copy.close();
     } finally {
       b.dispose();

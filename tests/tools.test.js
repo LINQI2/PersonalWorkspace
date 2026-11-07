@@ -65,10 +65,10 @@ test('schema2 -> 3 preserves every original column/relation/topic and creates re
         : openStore(dir, {
             validateMigrationBackup: (b) => validateBackup(b, { upgrade: false }).dispose(),
           });
-      assert.equal(db.prepare('PRAGMA user_version').get().user_version, fault ? 2 : 11);
+      assert.equal(db.prepare('PRAGMA user_version').get().user_version, fault ? 2 : 12);
       assert.equal(snapshot(db), before);
       assert.equal(readFileSync(path.join(dir, 'workspace.json'), 'utf8'), workspace);
-      assertDatabaseSchema(db, fault ? 2 : 11);
+      assertDatabaseSchema(db, fault ? 2 : 12);
       const zip = readdirSync(path.join(dir, 'backups')).find((n) => n.startsWith('pre-schema-3-'));
       assert.ok(zip);
       for (const bytes of [readFileSync(path.join(dir, 'backups', zip)), oldZip]) {
@@ -77,7 +77,7 @@ test('schema2 -> 3 preserves every original column/relation/topic and creates re
           const restored = openStore(checked.tmp);
           try {
             assert.equal(snapshot(restored), before);
-            assert.equal(restored.prepare('PRAGMA user_version').get().user_version, 11);
+            assert.equal(restored.prepare('PRAGMA user_version').get().user_version, 12);
           } finally {
             restored.close();
           }

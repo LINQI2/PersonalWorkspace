@@ -436,7 +436,7 @@ test('schema4 -> 5 preserves all imported knowledge and verifies real pre-upgrad
           }),
         );
       db = fail ? new DatabaseSync(path.join(dir, 'library.sqlite')) : openStore(dir);
-      assertDatabaseSchema(db, fail ? 4 : 11);
+      assertDatabaseSchema(db, fail ? 4 : 12);
       assert.equal(JSON.stringify(db.prepare('SELECT * FROM entries').all()), before);
       const zip = readdirSync(path.join(dir, 'backups')).find((f) => f.startsWith('pre-schema-5'));
       assert.ok(zip);

@@ -47,6 +47,7 @@ export function Assistant({
   registerLeave,
   initialContext,
   initialQuestion,
+  initialSpace = 'personal',
 }: {
   onOpen: (key: string) => void;
   onChanged: () => void;
@@ -54,7 +55,9 @@ export function Assistant({
   registerLeave: (fn: (() => Promise<boolean>) | undefined) => void;
   initialContext?: string;
   initialQuestion?: string;
+  initialSpace?: string;
 }) {
+  const [space, setSpace] = useState(initialSpace);
   const [tab, setTab] = useState(initialTab),
     [objects, setObjects] = useState<ObjectInfo[]>([]),
     [candidates, setCandidates] = useState<any[]>([]),
@@ -219,7 +222,7 @@ export function Assistant({
       <div className="knowledge-hero">
         <div>
           <div className="eyebrow">LOCAL EVIDENCE · HUMAN REVIEW</div>
-          <h1>知识助手</h1>
+          <h1>知识助手</h1><label>知识空间 <select value={space} onChange={e=>{setSpace(e.target.value);setKeys([]);setMatches([]);setResult(null);}}><option value="personal">个人知识</option><option value="professional">专业知识</option><option value="all">两者</option></select></label>
           <p>先检索、选证据，再生成回答或管理建议。原资料始终保留，AI 推断需要核对。</p>
         </div>
         <button
@@ -271,7 +274,7 @@ export function Assistant({
             disabled={busy || !question.trim()}
             onClick={() =>
               action(async () => {
-                const r = await assistantWrite('search', { question });
+                const r = await assistantWrite('search', { question, space });
                 setMatches(r.items);
                 setKeys(
                   r.items

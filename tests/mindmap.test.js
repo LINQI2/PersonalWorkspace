@@ -196,7 +196,7 @@ test('schema10 ->11 verifies recoverable old ZIP, preserves old34 tables and fau
   const dir = tmp();
   let db = openStore(dir);
   const note = saveEntry(db, form('旧知识'));
-  db.exec('DROP TABLE mindmap_versions;DROP TABLE mindmaps;PRAGMA user_version=10');
+  db.exec('DROP TABLE professional_entry_domains;DROP TABLE professional_entries;DROP TABLE professional_domains;DROP TABLE mindmap_versions;DROP TABLE mindmaps;PRAGMA user_version=10');
   db.close();
   db = null;
   try {
@@ -220,11 +220,11 @@ test('schema10 ->11 verifies recoverable old ZIP, preserves old34 tables and fau
     db = openStore(dir, {
       validateMigrationBackup(bytes) {
         const z = validateBackup(bytes, { upgrade: false });
-        assert.equal(z.sourceSchema, 10);
+        assert.ok([10, 11].includes(z.sourceSchema));
         z.dispose();
       },
     });
-    assert.equal(db.prepare('PRAGMA user_version').get().user_version, 11);
+    assert.equal(db.prepare('PRAGMA user_version').get().user_version, 12);
     assert.equal(db.prepare('SELECT count(*) n FROM mindmaps').get().n, 0);
     const file = readdirSync(path.join(dir, 'backups')).find((f) => f.startsWith('pre-schema-11-')),
       z = validateBackup(readFileSync(path.join(dir, 'backups', file)));

@@ -413,13 +413,13 @@ test('schema7 ->8 pre-migration ZIP keeps all old tables, fault stays7 and schem
           }),
         );
       db = fail ? new DatabaseSync(path.join(dir, 'library.sqlite')) : openStore(dir);
-      assertDatabaseSchema(db, fail ? 7 : 11);
+      assertDatabaseSchema(db, fail ? 7 : 12);
       assert.deepEqual(db.prepare('SELECT * FROM entries').all(), old);
       const zip = readdirSync(path.join(dir, 'backups')).find((f) => f.startsWith('pre-schema-8'));
       const v = validateBackup(readFileSync(path.join(dir, 'backups', zip)));
       try {
         const d = openStore(v.tmp);
-        assertDatabaseSchema(d, 11);
+        assertDatabaseSchema(d, 12);
         assert.deepEqual(d.prepare('SELECT * FROM entries').all(), old);
         d.close();
       } finally {

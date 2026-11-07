@@ -1,3 +1,4 @@
+import { Professional } from './Professional';
 import { MindmapEditor, createMindmap } from './MindmapEditor';
 import {
   rememberReadingOrigin,
@@ -112,6 +113,7 @@ function App() {
   const [page, setPage] = useState(1);
   const [view, setView] = useState('all');
   // 任务台独立于知识视图开关：切到任务台时保留知识列表筛选、选中与滚动位置
+  const [professionalOpen, setProfessionalOpen] = useState(false);
   const [tasksOpen, setTasksOpen] = useState(false);
   const tasksOpenRef = useRef(false);
   const knowledgeScroll = useRef(0);
@@ -128,6 +130,7 @@ function App() {
   const [knowledgeOpen, setKnowledgeOpen] = useState('');
   const [knowledgeDirectory, setKnowledgeDirectory] = useState('');
   const [assistantTab, setAssistantTab] = useState('ask');
+  const [assistantSpace,setAssistantSpace] = useState('personal');
   const [toolKind, setToolKind] = useState('');
   const [query, setQuery] = useState('');
   const [term, setTerm] = useState('');
@@ -347,6 +350,14 @@ function App() {
     const quickText = document.querySelector<HTMLTextAreaElement>('.quick-record textarea');
     if (quickText?.value.trim() && !confirm('快速记录尚未保存，确认离开此页面？')) return false;
     if (topicLeave.current && !(await topicLeave.current())) return false;
+    if (nextView === 'professional') {
+      knowledgeScroll.current = window.scrollY;
+      setTasksOpen(false);setProfessionalOpen(true);
+      if (innerWidth < 760) setSidebarClosed(true);
+      return true;
+    }
+    if(nextView === 'assistant')setAssistantSpace(professionalOpen?'professional':'personal');
+    setProfessionalOpen(false);
     if (nextView === 'tasks') {
       knowledgeScroll.current = window.scrollY;
       window.dispatchEvent(new Event('pk-close-readers'));
@@ -606,9 +617,10 @@ function App() {
     ['tasks', '任务台'],
     ['capture', '收集箱'],
     ['library', '知识库'],
+    ['professional', '专业知识'],
     ['assistant', 'AI 助手'],
   ];
-  const heading = tasksOpen
+  const heading = professionalOpen ? '专业知识' : tasksOpen
     ? '任务台'
     : view === 'assistant'
       ? 'AI 助手'
@@ -684,6 +696,7 @@ function App() {
               知识库
             </button>
             <button
+              title="专业知识" onClick={()=>nav('professional')} className={professionalOpen?'active':''}>专业知识</button><button
               title="AI 助手"
               className={!tasksOpen && view === 'assistant' ? 'active' : ''}
               onClick={async () => {
@@ -694,7 +707,7 @@ function App() {
               AI 助手
             </button>
           </nav>
-          <div className="shell-structure" style={tasksOpen ? { display: 'none' } : undefined}>
+          <div className="shell-structure" style={tasksOpen || professionalOpen ? { display: 'none' } : undefined}>
             {(['domains', 'collections'] as const).map((group) => (
               <section key={group}>
                 <div className="structure-heading">
@@ -794,11 +807,11 @@ function App() {
                 <button
                   key={k}
                   className={
-                    k === 'tasks'
+                    k === 'professional' ? professionalOpen ? 'active' : '' : k === 'tasks'
                       ? tasksOpen
                         ? 'active'
                         : ''
-                      : !tasksOpen &&
+                      : !tasksOpen && !professionalOpen &&
                           ((view === k && (k !== 'all' || !topicId)) ||
                             (k === 'library' && (view === 'knowledge' || !!topicId)))
                         ? 'active'
@@ -812,7 +825,7 @@ function App() {
             </nav>
             <form
               className="global-search"
-              style={tasksOpen ? { display: 'none' } : undefined}
+              style={tasksOpen || professionalOpen ? { display: 'none' } : undefined}
               onSubmit={async (e) => {
                 e.preventDefault();
                 if (await nav('library'))
@@ -833,7 +846,7 @@ function App() {
               <button
                 className="primary"
                 onClick={newEntry}
-                style={tasksOpen ? { display: 'none' } : undefined}
+                style={tasksOpen || professionalOpen ? { display: 'none' } : undefined}
               >
                 ＋ 新建
               </button>
@@ -847,7 +860,7 @@ function App() {
           </header>
           <div
             className={'content' + (tasksOpen ? ' is-tasks' : '')}
-            style={tasksOpen ? { display: 'none' } : undefined}
+            style={tasksOpen || professionalOpen ? { display: 'none' } : undefined}
           >
             {view === 'all' && !topicId && meta ? (
               <Workbench
@@ -868,6 +881,7 @@ function App() {
               />
             ) : view === 'assistant' ? (
               <Assistant
+                initialSpace={assistantSpace}
                 onChanged={refresh}
                 registerLeave={(fn) => {
                   topicLeave.current = fn;
@@ -1390,6 +1404,7 @@ function App() {
               </>
             )}
           </div>
+          <div style={professionalOpen?undefined:{display:'none'}}><Professional active={professionalOpen} onOpen={id=>{setProfessionalOpen(false);void browseContent(id);}} /></div>
           <div className={'tasks-host' + (tasksOpen ? ' is-active' : '')} aria-hidden={!tasksOpen}>
             <TasksModule active={tasksOpen} />
           </div>

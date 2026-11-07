@@ -247,7 +247,7 @@ test('schema8 sequential upgrade creates validated schema8 ZIP; migration faults
         );
       else {
         db = openStore(dir);
-        assertDatabaseSchema(db, 11);
+        assertDatabaseSchema(db, 12);
         assert.equal(
           db.prepare('SELECT content FROM entries WHERE id=?').get(e.id).content,
           '<p>旧正文</p>',
@@ -255,7 +255,7 @@ test('schema8 sequential upgrade creates validated schema8 ZIP; migration faults
         db.close();
       }
       db = new DatabaseSync(path.join(dir, 'library.sqlite'));
-      assertDatabaseSchema(db, fail ? 8 : 11);
+      assertDatabaseSchema(db, fail ? 8 : 12);
       db.close();
       const file = readdirSync(path.join(dir, 'backups')).find((f) => f.startsWith('pre-schema-9'));
       const z = validateBackup(readFileSync(path.join(dir, 'backups', file)), { upgrade: false });

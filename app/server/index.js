@@ -1,3 +1,6 @@
+import { spaceSql } from './space.js';
+import { seedPreview, seedSamples } from './professional-seed.js';
+import { professionalDomains, saveProfessionalDomain, searchProfessional, readProfessional, saveProfessional } from './professional.js';
 import { getMap, saveMap, importMap } from './mindmaps.js';
 import { visibleSql, quickCapture, setLifecycle } from './lifecycle.js';
 import express from 'express';
@@ -167,6 +170,23 @@ export function createApp(dataDir = path.join(root, 'data'), options = {}) {
     req.is('application/json')
       ? next()
       : res.status(403).json({ error: '请从当前本地网站确认操作。' });
+  app.get('/api/professional/seed/preview', (_req,res)=>res.json(seedPreview(db)));
+  app.post('/api/professional/seed',credentialGuard,(req,res)=>res.json(seedSamples(db,req.body)));
+  app.get('/api/professional/domains', (_req,res)=>res.json(professionalDomains(db)));
+  app.get('/api/professional/search', (req,res)=>res.json(searchProfessional(db,req.query)));
+  app.get('/api/professional/read/:id', (req,res)=>res.json(readProfessional(db,req.params.id)));
+  app.get('/api/professional/related/:id', (req,res)=>{
+    const card=readProfessional(db,req.params.id);
+    res.json(card.relations.map(r=>({...r,from_space:db.prepare('SELECT 1 FROM professional_entries WHERE entry_id=?').get(r.from_id)?'professional':'personal',to_space:db.prepare('SELECT 1 FROM professional_entries WHERE entry_id=?').get(r.to_id)?'professional':'personal'})));
+  });
+  app.post('/api/professional/domains',credentialGuard,(req,res)=>res.json(saveProfessionalDomain(db,req.body)));
+  app.put('/api/professional/domains/:id',credentialGuard,(req,res)=>res.json(saveProfessionalDomain(db,req.body,req.params.id)));
+  app.delete('/api/professional/domains/:id',credentialGuard,(req,res)=>{
+    if(req.body.confirm!=='删除专业领域') throw Error('请明确确认删除领域。');
+    db.prepare('DELETE FROM professional_domains WHERE id=?').run(req.params.id);res.json({ok:true});
+  });
+  app.post('/api/professional/entries',credentialGuard,(req,res)=>res.json(saveProfessional(db,req.body)));
+  app.put('/api/professional/entries/:id',credentialGuard,(req,res)=>res.json(saveProfessional(db,req.body,req.params.id)));
   app.get('/api/mindmaps/:id', (req, res) => res.json(getMap(db, req.params.id)));
   app.post('/api/mindmaps', credentialGuard, (req, res) => res.json(saveMap(db, req.body)));
   app.put('/api/mindmaps/:id', credentialGuard, (req, res) =>
@@ -295,7 +315,7 @@ export function createApp(dataDir = path.join(root, 'data'), options = {}) {
   const assistant = createAssistantReview(() => db, ai, dir, options.assistant);
   app.get('/api/assistant/catalog', (_req, res) => res.json(inspect(db)));
   app.post('/api/assistant/search', credentialGuard, (req, res) =>
-    res.json(retrieve(db, req.body.question)),
+    res.json(retrieve(db, req.body.question, req.body.space)),
   );
   app.post('/api/assistant/scope', credentialGuard, (req, res) => res.json(scope(db, req.body)));
   app.post('/api/assistant/estimate', credentialGuard, (req, res) =>
@@ -547,18 +567,18 @@ export function createApp(dataDir = path.join(root, 'data'), options = {}) {
       dataPath: dir,
       tasks: tasks.stats(),
       stats: {
-        total: db.prepare('SELECT count(*) n FROM entries').get().n,
+        total: db.prepare('SELECT count(*) n FROM entries e WHERE '+spaceSql(db)).get().n,
         pending: db
           .prepare(
-            'SELECT count(*) n FROM entries e WHERE NOT EXISTS(SELECT 1 FROM entry_domains r WHERE r.entry_id=e.id)',
+            'SELECT count(*) n FROM entries e WHERE '+spaceSql(db)+' AND NOT EXISTS(SELECT 1 FROM entry_domains r WHERE r.entry_id=e.id)',
           )
           .get().n,
         notes: db
-          .prepare("SELECT count(*) n FROM entries WHERE type='note' AND resource_kind='knowledge'")
+          .prepare("SELECT count(*) n FROM entries e WHERE type='note' AND resource_kind='knowledge' AND "+spaceSql(db))
           .get().n,
-        tools: db.prepare("SELECT count(*) n FROM entries WHERE resource_kind='tool'").get().n,
-        knowledge: db.prepare('SELECT count(*) n FROM knowledge_records').get().n,
-        captures: db.prepare("SELECT count(*) n FROM knowledge_records WHERE status='inbox'").get()
+        tools: db.prepare("SELECT count(*) n FROM entries e WHERE resource_kind='tool' AND "+spaceSql(db)).get().n,
+        knowledge: db.prepare('SELECT count(*) n FROM knowledge_records k JOIN entries e ON e.id=k.entry_id WHERE '+spaceSql(db)).get().n,
+        captures: db.prepare("SELECT count(*) n FROM knowledge_records k JOIN entries e ON e.id=k.entry_id WHERE status='inbox' AND "+spaceSql(db)).get()
           .n,
       },
       ...Object.fromEntries(
@@ -579,7 +599,7 @@ export function createApp(dataDir = path.join(root, 'data'), options = {}) {
   );
   app.get('/api/entries', (req, res) => {
     const q = req.query;
-    const where = [
+    const where = [spaceSql(db),
         q.view === 'trash'
           ? "EXISTS(SELECT 1 FROM content_lifecycle l WHERE l.entry_id=e.id AND l.state='trash')"
           : visibleSql(db),

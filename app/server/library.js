@@ -62,6 +62,8 @@ export function batchEntries(db, input) {
     throw new Error('请选择有效的分类。');
   if (ids.some((id) => !db.prepare('SELECT id FROM entries WHERE id=?').get(id)))
     throw new Error('所选条目已变化，请刷新后重新选择。');
+  if (input.action === 'add' && db.prepare('PRAGMA user_version').get().user_version >= 12 && ids.some(id=>db.prepare('SELECT 1 FROM professional_entries WHERE entry_id=?').get(id)))
+    throw Error('请在专业知识模块管理专业归属，未修改个人分类。');
   if (input.action === 'delete') checkDelete(db, ids);
   db.exec('BEGIN IMMEDIATE');
   try {

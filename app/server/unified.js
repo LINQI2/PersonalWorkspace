@@ -1,3 +1,4 @@
+import { spaceSql } from './space.js';
 import { visibleSql } from './lifecycle.js';
 import { randomUUID, createHash } from 'node:crypto';
 import { transaction } from './knowledge/store.js';
@@ -136,7 +137,7 @@ export function ruleMembers(db, id, providedRule) {
   const domains = new Set(rule.domains.flatMap((d) => domainScope(db, d)));
   return db
     .prepare(
-      `SELECT e.id,e.type,e.resource_kind,k.kind knowledge_kind,EXISTS(SELECT 1 FROM mindmaps m WHERE m.entry_id=e.id) mindmap FROM entries e LEFT JOIN knowledge_records k ON k.entry_id=e.id WHERE ${visibleSql(db)} AND NOT EXISTS(SELECT 1 FROM knowledge_structure s WHERE s.entry_id=e.id)`,
+      `SELECT e.id,e.type,e.resource_kind,k.kind knowledge_kind,EXISTS(SELECT 1 FROM mindmaps m WHERE m.entry_id=e.id) mindmap FROM entries e LEFT JOIN knowledge_records k ON k.entry_id=e.id WHERE ${visibleSql(db)} AND ${spaceSql(db)} AND NOT EXISTS(SELECT 1 FROM knowledge_structure s WHERE s.entry_id=e.id)`,
     )
     .all()
     .filter(

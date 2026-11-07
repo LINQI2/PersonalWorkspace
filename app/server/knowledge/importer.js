@@ -68,7 +68,7 @@ export function prepareImport(db, raw, format, convertLegacy = false) {
       '%';
     const matches = db
       .prepare(
-        "SELECT id,title,plain_text FROM entries WHERE title LIKE ? ESCAPE '\\' ORDER BY updated_at DESC LIMIT 5",
+        "SELECT id,title,plain_text FROM entries e WHERE "+spaceSql(db)+" AND title LIKE ? ESCAPE '\\' ORDER BY updated_at DESC LIMIT 5",
       )
       .all(keyword);
     return {
@@ -338,3 +338,4 @@ export function createImportSession(getDb, { beforeCommit } = {}) {
     },
   };
 }
+import { spaceSql } from '../space.js';
