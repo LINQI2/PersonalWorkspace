@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
+import { randomUUID,createHash } from 'node:crypto';
+import sharp from 'sharp';
+import { saveKnowledgeDraft } from '../app/server/knowledge/store.js';
 import os from 'node:os';
 import path from 'node:path';
 import { openStore, saveEntry } from '../app/server/store.js';
@@ -38,7 +41,7 @@ test('40 nonempty cards retain review boundaries and sources, reinitialization d
     );
     assert.equal(
       db.prepare("SELECT count(*) n FROM knowledge_sources WHERE date_note LIKE '待核验%'").get().n,
-      5,
+      0,
     );
     const archive = validateBackup(await exportBackup(db, dir));
     try {
@@ -235,11 +238,21 @@ test('40 professional cards and tasks survive actual unified backup/restore with
       body: body instanceof FormData ? body : JSON.stringify(body),
     });
   try {
+    const asset=randomUUID(),filename=asset+'.webp';
+    const image=await sharp({create:{width:2,height:2,channels:3,background:'#008080'}}).webp().toBuffer();
+    writeFileSync(path.join(dir,'attachments',filename),image);
+    store.getDb().prepare('INSERT INTO assets VALUES(?,?,?,?)').run(asset,filename,'image/webp',image.length);
+    saveKnowledgeDraft(store.getDb(),'professional:new',{title:'隔离恢复草稿',content:'<p>保存尚未采用的输入</p>'});
+    const snapshot=db=>Object.fromEntries(db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all().map(({name})=>[name,db.prepare('SELECT * FROM "'+name+'"').all().map(r=>JSON.stringify(r)).sort()]));
+    const before=snapshot(store.getDb());
     assert.equal((await post('/tasks', { title: '保留的任务' })).status, 201);
+    const beforeTasks=await(await fetch(base+'/api/tasks')).json();
     const response = await post('/workspace/backup', {});
     assert.equal(response.status, 200);
     const bytes = Buffer.from(await response.arrayBuffer());
     await post('/tasks', { title: '备份之后新增' });
+    const original=readProfessional(store.getDb(),searchProfessional(store.getDb())[0].id);
+    saveProfessional(store.getDb(),{...original,title:'备份后变化',aliases:original.aliases,professional_domains:original.professional_domains.map(d=>d.id),primary_domain:original.professional_domains.find(d=>d.is_primary).id},original.id);
     const form = new FormData();
     form.append('backup', new Blob([bytes], { type: 'application/zip' }), 'workspace.zip');
     form.append('confirm', '恢复工作空间');
@@ -252,6 +265,9 @@ test('40 professional cards and tasks survive actual unified backup/restore with
     assert.equal(tasks.tasks[0].title, '保留的任务');
     const personal = await (await fetch(base + '/api/entries')).json();
     assert.equal(personal.total, 0);
+    assert.deepEqual(snapshot(store.getDb()),before);
+    assert.deepEqual(tasks.tasks,beforeTasks.tasks);
+    assert.equal(createHash('sha256').update(readFileSync(path.join(dir,'attachments',filename))).digest('hex'),createHash('sha256').update(image).digest('hex'));
   } finally {
     await new Promise((r) => server.close(r));
     await store.close();

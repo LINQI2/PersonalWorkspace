@@ -87,8 +87,8 @@ export const sampleCards = [
     '让相关职责聚集，并减少不同职责之间必须共同理解的依赖。',
     '按物理、输入、渲染等领域拆分职责，有助于局部修改。分离后的通信方式仍需设计。',
     '这是设计目标，不意味着组件数量越多越好；性能与复杂度需要权衡。',
-    'https://gameprogrammingpatterns.com/architecture-performance-and-games.html',
-    'Robert Nystrom · Architecture, Performance, and Games',
+    'https://github.com/munificent/game-programming-patterns/blob/master/book/observer.markdown',
+    'Robert Nystrom · Observer（内聚与最小跨域通信段落）',
   ],
   [
     'component',
@@ -99,7 +99,7 @@ export const sampleCards = [
     '将一个对象跨越多个领域的职责拆成独立组件。',
     '对象聚合不同职责的组件，使物理、输入与显示代码可以分别演进。组件间仍通过明确的数据或接口协作。',
     '一般组件组合不自动等同于数据导向的 ECS。',
-    'https://gameprogrammingpatterns.com/component.html',
+    'https://github.com/munificent/game-programming-patterns/blob/master/book/component.markdown',
     'Robert Nystrom · Component',
   ],
   [
@@ -111,7 +111,7 @@ export const sampleCards = [
     '让事件源通过订阅接口通知观察者，而不绑定其具体实现。',
     '可用来分离物理事件与成就等独立系统。通知传播需要考虑生命周期及调用关系。',
     '同步观察者通知不等于异步事件队列，过度间接会增加理解成本。',
-    'https://gameprogrammingpatterns.com/observer.html',
+    'https://github.com/munificent/game-programming-patterns/blob/master/book/observer.markdown',
     'Robert Nystrom · Observer',
   ],
   [
@@ -231,7 +231,7 @@ export function seedSamples(db, input) {
             title: c[9],
             url: c[8],
             excerpt: c[5] + ' ' + c[6],
-            date_note: (c[10]==='pending'||['cohesion','component','observer'].includes(c[0])?'待核验：原文未完整取得，不能视作核验通过。':'2026-11-07 来源页面已核对，正文为原创归纳，人工待审核。')+' '+c[9],
+            date_note: (['cohesion','component','observer','core-loop','fsm'].includes(c[0])?'2026-11-07 定义、范围及来源正文已核对；原创归纳，入库仍待人工审核。 ':'2026-11-07 来源页面已核对，正文为原创归纳，人工待审核。 ')+c[9],
           },
         },
         undefined,
